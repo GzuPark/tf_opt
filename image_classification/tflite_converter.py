@@ -9,10 +9,10 @@ import tensorflow as tf
 
 class ImageClassificationConverter(object):
 
-    def __init__(self, method: str, model: tf.keras.Model, data: Dict[str, Any]) -> None:
+    def __init__(self, ckpt_dir: str, method: str, model: tf.keras.Model, data: Dict[str, Any]) -> None:
         self._data = data
         self._method = method if method in {"fp32", "fp16", "uint8", "dynamic"} else "dynamic"
-        self._model_path = None
+        self._model_path = os.path.join(ckpt_dir, f"mnist_tflite_{method}.tflite")
         self._interpreter = None
 
         self._converter = tf.lite.TFLiteConverter.from_keras_model(model)
@@ -34,9 +34,10 @@ class ImageClassificationConverter(object):
         for input_value in tf.data.Dataset.from_tensor_slices(self._data["x_train"]).batch(1).take(100):
             yield [input_value]
 
-    def convert(self, path: str) -> None:
-        self._model_path = path
+    def convert(self) -> None:
+
         quant_model = self._converter.convert()
+
         with open(self._model_path, "wb") as f:
             f.write(quant_model)
 
@@ -44,7 +45,7 @@ class ImageClassificationConverter(object):
         self._interpreter = tf.lite.Interpreter(self._model_path)
         self._interpreter.allocate_tensors()
 
-    def predict(self) -> Dict[str, Union[np.ndarray, float]]:
+    def evaluate(self) -> Dict[str, Union[np.ndarray, float]]:
         self._get_interpreter()
 
         input_details = self._interpreter.get_input_details()[0]
@@ -71,23 +72,10 @@ class ImageClassificationConverter(object):
         end_time = perf_counter()
 
         result = {
-            "method": self._method,
-            "pred": predictions,
-            "total_time": end_time - start_time,
+            "method": self._method, "total_time": end_time - start_time,
             "avg_time": (end_time - start_time) / len(self._data["y_test"]),
             "model_file_size": os.path.getsize(self._model_path),
+            "accuracy": (np.sum(self._data["y_test"] == predictions) / len(self._data["y_test"])).astype(float),
         }
 
         return result
-
-
-def get_result(dir_path: str, method: str, model: tf.keras.Model, data: Dict[str, Any]) -> Dict[str, Any]:
-    _path = os.path.join(dir_path, f"tflite_{method}.tflite")
-    converter = ImageClassificationConverter(method, model, data)
-    converter.convert(_path)
-
-    result = converter.predict()
-    result["accuracy"] = (np.sum(data["y_test"] == result["pred"]) / len(data["y_test"])).astype(float)
-    del result["pred"]
-
-    return result

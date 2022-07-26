@@ -1,5 +1,5 @@
 from .mnist import CustomModel
-from .tflite_converter import get_result
+from .tflite_converter import ImageClassificationConverter
 
 mnist_custom_model = CustomModel
-get_result = get_result
+ImageClassificationConverter = ImageClassificationConverter

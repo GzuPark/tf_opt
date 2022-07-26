@@ -1,14 +1,17 @@
 import os.path
 
-from image_classification import mnist_custom_model, get_result
+from image_classification import mnist_custom_model, ImageClassificationConverter
 from utils import set_seed
 
 
 def run_mnist(path: str) -> None:
+    result = list()
+
     mnist_model = mnist_custom_model(path)
     mnist_model.create_model()
     mnist_model.train()
-    res_origin = mnist_model.evaluate()
+
+    result.append(mnist_model.evaluate())
 
     required_data = {
         "x_train": mnist_model.x_train,
@@ -17,17 +20,16 @@ def run_mnist(path: str) -> None:
     }
 
     kwargs = {
-        "dir_path": mnist_model.ckpt_dir,
+        "ckpt_dir": mnist_model.ckpt_dir,
         "model": mnist_model.model,
         "data": required_data,
     }
 
-    res_fp32 = get_result(method="fp32", **kwargs)
-    res_fp16 = get_result(method="fp16", **kwargs)
-    res_dynamic = get_result(method="dynamic", **kwargs)
-    res_uint8 = get_result(method="uint8", **kwargs)
-
-    result = [res_origin, res_fp32, res_fp16, res_dynamic, res_uint8]
+    methods = ["fp32", "fp16", "dynamic", "uint8"]
+    for method in methods:
+        converter = ImageClassificationConverter(method=method, **kwargs)
+        converter.convert()
+        result.append(converter.evaluate())
 
     print("-" * 65)
     print(f"| {'Method':>10} | {'Accuracy':>12} | {'Avg. time':>15} | {'File size':>15} |")
