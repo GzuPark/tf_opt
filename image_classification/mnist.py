@@ -1,5 +1,4 @@
 import os
-import shutil
 
 from time import perf_counter
 from typing import Any, Dict
@@ -12,7 +11,6 @@ class CustomModel(object):
 
     def __init__(self, root_path: str, validation: bool = False, reset: bool = False) -> None:
         self.ckpt_dir = os.path.join(root_path, "ckpt")
-        self.data_dir = os.path.join(root_path, "mnist_data")
         self.model = None
         self.x_train = None
         self.y_train = None
@@ -20,7 +18,8 @@ class CustomModel(object):
         self.y_test = None
         self.x_val = None
         self.y_val = None
-        self._model_path = os.path.join(self.ckpt_dir, "keras_model.h5")
+        self._data_dir = os.path.join(root_path, "data", "mnist_data")
+        self._model_path = os.path.join(self.ckpt_dir, "mnist_keras_model.h5")
         self._validation = validation
 
         self._check_dirs(reset)
@@ -28,16 +27,18 @@ class CustomModel(object):
 
     def _check_dirs(self, reset: bool) -> None:
         if reset:
-            shutil.rmtree(self.ckpt_dir, ignore_errors=True)
+            for model_name in os.listdir(self.ckpt_dir):
+                if "mnist_" in model_name:
+                    os.remove(os.path.join(self.ckpt_dir, model_name))
 
         if not os.path.exists(self.ckpt_dir):
             os.makedirs(self.ckpt_dir)
 
-        if not os.path.exists(self.data_dir):
-            os.makedirs(self.data_dir)
+        if not os.path.exists(self._data_dir):
+            os.makedirs(self._data_dir)
 
     def _download_dataset(self) -> None:
-        data_path = os.path.join(self.data_dir, "mnist.npz")
+        data_path = os.path.join(self._data_dir, "mnist.npz")
         train_dataset, test_dateset = tf.keras.datasets.mnist.load_data(path=data_path)
 
         self.x_train, self.y_train = train_dataset
