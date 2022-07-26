@@ -9,11 +9,10 @@ import tensorflow as tf
 
 class ImageClassificationConverter(object):
 
-    def __init__(self, method: str, model: tf.keras.Model, x_train: Any, x_test: Any) -> None:
-        self._train = x_train
-        self._test = x_test
+    def __init__(self, method: str, model: tf.keras.Model, data: Dict[str, Any]) -> None:
+        self._data = data
         self._method = method if method in {"fp16", "uint8", "dynamic"} else "dynamic"
-        self._path = None
+        self._model_path = None
         self._interpreter = None
 
         self._converter = tf.lite.TFLiteConverter.from_keras_model(model)
@@ -31,17 +30,17 @@ class ImageClassificationConverter(object):
             self._converter.inference_output_type = tf.uint8
 
     def _representative_data_gen(self) -> Any:
-        for input_value in tf.data.Dataset.from_tensor_slices(self._train).batch(1).take(100):
+        for input_value in tf.data.Dataset.from_tensor_slices(self._data["x_train"]).batch(1).take(100):
             yield [input_value]
 
     def convert(self, path: str) -> None:
-        self._path = path
+        self._model_path = path
         quant_model = self._converter.convert()
-        with open(self._path, "wb") as f:
+        with open(self._model_path, "wb") as f:
             f.write(quant_model)
 
     def _get_interpreter(self) -> None:
-        self._interpreter = tf.lite.Interpreter(self._path)
+        self._interpreter = tf.lite.Interpreter(self._model_path)
         self._interpreter.allocate_tensors()
 
     def predict(self) -> Dict[str, Union[np.ndarray, float]]:
@@ -50,12 +49,12 @@ class ImageClassificationConverter(object):
         input_details = self._interpreter.get_input_details()[0]
         output_details = self._interpreter.get_output_details()[0]
 
-        x_test_indices = range(self._test.shape[0])
+        x_test_indices = range(self._data["x_test"].shape[0])
         predictions = np.zeros((len(x_test_indices),), dtype=int)
 
         start_time = perf_counter()
         for i, idx in enumerate(x_test_indices):
-            test_image = self._test[idx]
+            test_image = self._data["x_test"][idx]
 
             if input_details["dtype"] == np.uint8:
                 input_scale, input_zero_point = input_details["quantization"]
@@ -74,8 +73,8 @@ class ImageClassificationConverter(object):
             "method": self._method,
             "pred": predictions,
             "total_time": end_time - start_time,
-            "avg_time": (end_time - start_time) / len(self._test),
-            "model_file_size": os.path.getsize(self._path),
+            "avg_time": (end_time - start_time) / len(self._data["y_test"]),
+            "model_file_size": os.path.getsize(self._model_path),
         }
 
         return result
@@ -83,7 +82,7 @@ class ImageClassificationConverter(object):
 
 def get_result(dir_path: str, method: str, model: tf.keras.Model, data: Dict[str, Any]) -> Dict[str, Any]:
     _path = os.path.join(dir_path, f"tflite_{method}.tflite")
-    converter = ImageClassificationConverter(method, model, data["x_train"], data["x_test"])
+    converter = ImageClassificationConverter(method, model, data)
     converter.convert(_path)
 
     result = converter.predict()
