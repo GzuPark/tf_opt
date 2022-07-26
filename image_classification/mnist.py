@@ -11,7 +11,7 @@ import tensorflow as tf
 class CustomModel(object):
 
     def __init__(self, validation: bool = False, force: bool = False) -> None:
-        self.ckpt_dir = os.path.join(os.path.dirname(__file__), "ckpt")
+        self.ckpt_dir = os.path.join(os.path.dirname(__file__), "../ckpt")
 
         if force:
             shutil.rmtree(self.ckpt_dir)
@@ -24,7 +24,7 @@ class CustomModel(object):
         self._download_dataset()
 
     def _download_dataset(self) -> None:
-        data_dir = os.path.join(os.path.dirname(__file__), "mnist_data")
+        data_dir = os.path.join(os.path.dirname(__file__), "../mnist_data")
         if not os.path.exists(data_dir):
             os.makedirs(data_dir)
 

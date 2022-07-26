@@ -40,7 +40,7 @@ class ImageClassificationConverter(object):
         with open(self._path, "wb") as f:
             f.write(quant_model)
 
-    def _get_interpreter(self):
+    def _get_interpreter(self) -> None:
         self._interpreter = tf.lite.Interpreter(self._path)
         self._interpreter.allocate_tensors()
 
