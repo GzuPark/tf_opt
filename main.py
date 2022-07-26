@@ -1,11 +1,10 @@
 import os.path
 
-from image_classification.mnist import CustomModel
-from image_classification.tflite_converter import get_result
+from image_classification import mnist_custom_model, get_result
 
 
 def run_mnist(path: str) -> None:
-    mnist_model = CustomModel(path)
+    mnist_model = mnist_custom_model(path)
     mnist_model.create_model()
     mnist_model.train()
     res_origin = mnist_model.evaluate()
