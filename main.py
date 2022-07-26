@@ -1,13 +1,11 @@
 import os.path
 
 from image_classification import mnist_custom_model, get_result
-from utils.fix_seed import set_seed
+from utils import set_seed
 
 
 def run_mnist(path: str) -> None:
-    set_seed()
-
-    mnist_model = mnist_custom_model(path, reset=True)
+    mnist_model = mnist_custom_model(path)
     mnist_model.create_model()
     mnist_model.train()
     res_origin = mnist_model.evaluate()
@@ -45,6 +43,8 @@ def run_mnist(path: str) -> None:
 
 
 def main() -> None:
+    set_seed()
+
     root_path = os.path.dirname(__file__)
     run_mnist(root_path)
 
