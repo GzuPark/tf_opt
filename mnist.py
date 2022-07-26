@@ -7,8 +7,6 @@ from typing import Any, Dict
 import numpy as np
 import tensorflow as tf
 
-from utils import download_dataset
-
 
 class CustomModel(object):
 
@@ -22,8 +20,16 @@ class CustomModel(object):
 
         self._model_path = os.path.join(self.ckpt_dir, "keras_model.h5")
         self.model = None
+        self._validation = validation
+        self._download_dataset()
 
-        train_dataset, test_dateset = download_dataset("mnist")
+    def _download_dataset(self) -> None:
+        data_dir = os.path.join(os.path.dirname(__file__), "mnist_data")
+        if not os.path.exists(data_dir):
+            os.makedirs(data_dir)
+
+        data_path = os.path.join(data_dir, "mnist.npz")
+        train_dataset, test_dateset = tf.keras.datasets.mnist.load_data(path=data_path)
 
         self.x_train, self.y_train = train_dataset
         self.x_test, self.y_test = test_dateset
@@ -34,14 +40,12 @@ class CustomModel(object):
         self.x_val = None
         self.y_val = None
 
-        if validation:
+        if self._validation:
             self.x_val = self.x_train[50000:]
             self.y_val = self.y_train[50000:]
 
             self.x_train = self.x_train[:50000]
             self.y_train = self.y_train[:50000]
-
-        self._validation = validation
 
     def create_model(self) -> None:
         input_layer = tf.keras.Input(shape=(28, 28))
