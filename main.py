@@ -22,11 +22,12 @@ def run_mnist(path: str) -> None:
         "data": required_data,
     }
 
+    res_fp32 = get_result(method="fp32", **kwargs)
     res_fp16 = get_result(method="fp16", **kwargs)
     res_dynamic = get_result(method="dynamic", **kwargs)
     res_uint8 = get_result(method="uint8", **kwargs)
 
-    result = [res_origin, res_fp16, res_dynamic, res_uint8]
+    result = [res_origin, res_fp32, res_fp16, res_dynamic, res_uint8]
 
     print("-" * 65)
     print(f"| {'Method':>10} | {'Accuracy':>12} | {'Avg. time':>15} | {'File size':>15} |")

@@ -11,7 +11,7 @@ class ImageClassificationConverter(object):
 
     def __init__(self, method: str, model: tf.keras.Model, data: Dict[str, Any]) -> None:
         self._data = data
-        self._method = method if method in {"fp16", "uint8", "dynamic"} else "dynamic"
+        self._method = method if method in {"fp32", "fp16", "uint8", "dynamic"} else "dynamic"
         self._model_path = None
         self._interpreter = None
 
@@ -19,7 +19,8 @@ class ImageClassificationConverter(object):
         self._initialize()
 
     def _initialize(self) -> None:
-        self._converter.optimizations = [tf.lite.Optimize.DEFAULT]
+        if self._method != "fp32":
+            self._converter.optimizations = [tf.lite.Optimize.DEFAULT]
 
         if self._method == "fp16":
             self._converter.target_spec.supported_types = [tf.float16]
