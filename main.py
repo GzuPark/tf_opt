@@ -1,29 +1,28 @@
 import os.path
 
-from image_classification import mnist_custom_model, ImageClassificationConverter
+from image_classification import mnist, ImageClassificationConverter
 from utils import set_seed
 
 
 def run_mnist(path: str) -> None:
-    result = list()
-
-    mnist_model = mnist_custom_model(path)
-    mnist_model.create_model()
-    mnist_model.train()
-
-    result.append(mnist_model.evaluate())
+    model = mnist.BasicModel(path)
+    model.create_model()
+    model.train()
 
     required_data = {
-        "x_train": mnist_model.x_train,
-        "x_test": mnist_model.x_test,
-        "y_test": mnist_model.y_test,
+        "x_train": model.x_train,
+        "x_test": model.x_test,
+        "y_test": model.y_test,
     }
 
     kwargs = {
-        "ckpt_dir": mnist_model.ckpt_dir,
-        "model": mnist_model.model,
+        "ckpt_dir": model.ckpt_dir,
+        "model": model.model,
         "data": required_data,
     }
+
+    result = list()
+    result.append(model.evaluate())
 
     methods = ["fp32", "fp16", "dynamic", "uint8", "int16x8"]
     for method in methods:

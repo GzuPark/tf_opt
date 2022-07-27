@@ -7,7 +7,7 @@ import numpy as np
 import tensorflow as tf
 
 
-class CustomModel(object):
+class _BaseModel(object):
 
     def __init__(self, root_path: str, validation: bool = False, reset: bool = False) -> None:
         self.ckpt_dir = os.path.join(root_path, "ckpt")
@@ -17,7 +17,6 @@ class CustomModel(object):
         self.x_test = None
         self.y_test = None
         self._data_dir = os.path.join(root_path, "data", "mnist_data")
-        self._model_path = os.path.join(self.ckpt_dir, "mnist_keras_model.h5")
         self._validation = validation
 
         self._check_dirs(reset)
@@ -44,6 +43,21 @@ class CustomModel(object):
 
         self.x_train = self.x_train.astype(np.float32) / 255.0
         self.x_test = self.x_test.astype(np.float32) / 255.0
+
+    def create_model(self, summary: bool = False) -> None:
+        raise NotImplementedError
+
+    def train(self) -> None:
+        raise NotImplementedError
+
+    def evaluate(self) -> Dict[str, Any]:
+        raise NotImplementedError
+
+
+class BasicModel(_BaseModel):
+    def __init__(self, root_path: str, validation: bool = False, reset: bool = False) -> None:
+        super().__init__(root_path, validation, reset)
+        self._model_path = os.path.join(self.ckpt_dir, "basic_mnist_model.h5")
 
     def create_model(self, summary: bool = False) -> None:
         input_layer = tf.keras.Input(shape=(28, 28))
