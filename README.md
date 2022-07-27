@@ -25,3 +25,9 @@
 |       fp16 |           quant |      97.79 % |        324.5 ms |        24.16 KB |
 |    dynamic |           quant |      97.79 % |        324.9 ms |        24.16 KB |
 |      uint8 |           quant |      97.74 % |        343.9 ms |        24.19 KB |
+|      keras |      clustering |      97.24 % |        337.1 ms |        95.27 KB |
+|       fp32 |      clustering |      97.24 % |        372.2 ms |        82.63 KB |
+|       fp16 |      clustering |      97.24 % |        371.9 ms |        43.34 KB |
+|    dynamic |      clustering |      97.26 % |        372.2 ms |        23.30 KB |
+|      uint8 |      clustering |      97.32 % |        355.8 ms |        23.85 KB |
+|    int16x8 |      clustering |      97.25 % |       1969.5 ms |        24.16 KB |
