@@ -8,15 +8,20 @@
 
 |     Method |  Model optimize |     Accuracy |      Total time |       File size |
 |-----------:|----------------:|-------------:|----------------:|----------------:|
-|      keras |            None |      97.50 % |        295.4 ms |       266.47 KB |
-|       fp32 |            none |      97.50 % |        366.0 ms |        82.63 KB |
-|       fp16 |            none |      97.50 % |        366.0 ms |        43.34 KB |
-|    dynamic |            none |      97.50 % |        361.6 ms |        23.30 KB |
-|      uint8 |            none |      97.54 % |        346.0 ms |        23.85 KB |
-|    int16x8 |            none |      97.50 % |       1940.0 ms |        24.16 KB |
-| keras | pruning | 97.25 % | 350.4 ms | 97.27 KB |
-| fp32 | pruning | 97.25 % | 367.9 ms | 82.63 KB |
-| fp16 | pruning | 97.25 % | 365.9 ms | 43.34 KB |
-| dynamic | pruning | 97.26 % | 362.5 ms | 23.30 KB |
-| uint8 | pruning | 97.23 % | 345.8 ms | 23.85 KB |
-| int16x8 | pruning | 97.26 % | 1933.9 ms | 24.16 KB |
+|      keras |            None |      97.50 % |        304.1 ms |       266.47 KB |
+|       fp32 |            none |      97.50 % |        366.4 ms |        82.63 KB |
+|       fp16 |            none |      97.50 % |        365.3 ms |        43.34 KB |
+|    dynamic |            none |      97.50 % |        365.0 ms |        23.30 KB |
+|      uint8 |            none |      97.54 % |        346.5 ms |        23.85 KB |
+|    int16x8 |            none |      97.50 % |       1934.0 ms |        24.16 KB |
+|      keras |         pruning |      97.25 % |        354.8 ms |        97.27 KB |
+|       fp32 |         pruning |      97.25 % |        364.9 ms |        82.63 KB |
+|       fp16 |         pruning |      97.25 % |        366.4 ms |        43.34 KB |
+|    dynamic |         pruning |      97.26 % |        363.3 ms |        23.30 KB |
+|      uint8 |         pruning |      97.23 % |        345.4 ms |        23.85 KB |
+|    int16x8 |         pruning |      97.26 % |       1934.1 ms |        24.16 KB |
+|      keras |         pruning |      97.79 % |        337.1 ms |       283.45 KB |
+|       fp32 |           quant |      97.79 % |        407.4 ms |       167.73 KB |
+|       fp16 |           quant |      97.79 % |        324.5 ms |        24.16 KB |
+|    dynamic |           quant |      97.79 % |        324.9 ms |        24.16 KB |
+|      uint8 |           quant |      97.74 % |        343.9 ms |        24.19 KB |
