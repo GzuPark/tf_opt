@@ -16,6 +16,7 @@ def run_mnist(path: str) -> None:
     }
 
     kwargs = {
+        "prefix": "basic_mnist",
         "ckpt_dir": model.ckpt_dir,
         "model": model.model,
         "data": required_data,

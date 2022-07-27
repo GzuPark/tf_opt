@@ -9,10 +9,10 @@ import tensorflow as tf
 
 class ImageClassificationConverter(object):
 
-    def __init__(self, ckpt_dir: str, method: str, model: tf.keras.Model, data: Dict[str, Any]) -> None:
+    def __init__(self, ckpt_dir: str, prefix: str, method: str, model: tf.keras.Model, data: Dict[str, Any]) -> None:
         self._data = data
         self._method = method if method in {"fp32", "fp16", "uint8", "dynamic", "int16x8"} else "dynamic"
-        self._model_path = os.path.join(ckpt_dir, f"mnist_tflite_{method}.tflite")
+        self._model_path = os.path.join(ckpt_dir, f"{prefix}_{method}.tflite")
         self._interpreter = None
 
         self._converter = tf.lite.TFLiteConverter.from_keras_model(model)
