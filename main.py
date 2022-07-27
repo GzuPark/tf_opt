@@ -6,6 +6,83 @@ from image_classification import mnist, ImageClassificationConverter
 from utils import set_seed
 
 
+def run_modules(
+        module: Any,
+        keras_kwargs: Dict[str, Any],
+        tflite_kwargs: Dict[str, Any],
+        tflite_methods: List[str],
+        is_base: bool = False,
+) -> List[Dict[str, Any]]:
+    result = list()
+
+    model = module(**keras_kwargs)
+    model.create_model()
+    model.train()
+    result.append(model.evaluate())
+
+    if is_base:
+        keras_kwargs["base_model"] = model.model
+
+        tflite_kwargs["ckpt_dir"] = model.ckpt_dir
+        tflite_kwargs["model"] = model.model
+        tflite_kwargs["data"] = {"x_train": model.x_train, "x_test": model.x_test, "y_test": model.y_test}
+
+    tflite_kwargs["ckpt_dir"] = model.ckpt_dir
+    tflite_kwargs["model"] = model.model
+
+    for method in tflite_methods:
+        converter = ImageClassificationConverter(method=method, **tflite_kwargs)
+        converter.convert()
+        result.append(converter.evaluate())
+
+    return result
+
+
+def run_mnist(path: str) -> None:
+    result = list()
+
+    # RuntimeError: Quantization to 16x8-bit not yet supported for op: 'DEQUANTIZE'
+    tflite_methods_1 = ["fp32", "fp16", "dynamic", "uint8"]
+    tflite_methods_2 = tflite_methods_1 + ["int16x8"]
+
+    keras_kwargs = dict()
+    keras_kwargs["root_path"] = path
+    keras_kwargs["validation_split"] = 0.1
+
+    tflite_kwargs = dict()
+    tflite_kwargs["dataset_name"] = "mnist"
+
+    # No optimized
+    tflite_kwargs["opt"] = "none"
+    result.extend(run_modules(mnist.BasicModel, keras_kwargs, tflite_kwargs, tflite_methods_2, True))
+
+    # Pruning
+    tflite_kwargs["opt"] = "prune"
+    result.extend(run_modules(mnist.PruningModel, keras_kwargs, tflite_kwargs, tflite_methods_2))
+
+    # Quantization
+    tflite_kwargs["opt"] = "quantize"
+    result.extend(run_modules(mnist.QuantizationModel, keras_kwargs, tflite_kwargs, tflite_methods_1))
+
+    # Clustering
+    tflite_kwargs["opt"] = "cluster"
+    result.extend(run_modules(mnist.ClusteringModel, keras_kwargs, tflite_kwargs, tflite_methods_2))
+
+    # Clustering - QAT
+    keras_kwargs["base_model"] = tflite_kwargs["model"]
+    keras_kwargs["method"] = "qat"
+    tflite_kwargs["opt"] = "cluster_qat"
+    result.extend(run_modules(mnist.CQATModel, keras_kwargs, tflite_kwargs, tflite_methods_1))
+
+    # Clustering - CQAT
+    keras_kwargs["method"] = "cqat"
+    tflite_kwargs["opt"] = "cluster_cqat"
+    result.extend(run_modules(mnist.CQATModel, keras_kwargs, tflite_kwargs, tflite_methods_1))
+
+    # Print out
+    print_results(result)
+
+
 def print_results(result: List[Dict[str, Any]]) -> None:
     print(f"| {'Method':>10} | {'Model optimize':>15} | {'Accuracy':>12} | {'Total time':>15} | {'File size':>15} |")
     print(f"|{'-' * 11}:|{'-' * 16}:|{'-' * 13}:|{'-' * 16}:|{'-' * 16}:|")
@@ -17,124 +94,6 @@ def print_results(result: List[Dict[str, Any]]) -> None:
         _time = res['total_time'] * 1000
         _size = res['model_file_size'] / 1024
         print(f"| {_method:>10} | {_opt:>15} | {_acc:>10.2f} % | {_time:>12.1f} ms | {_size:>12.2f} KB |")
-
-
-def run_mnist(path: str) -> None:
-    model = mnist.BasicModel(path, validation_split=0.1)
-    model.create_model()
-    model.train()
-
-    required_data = {
-        "x_train": model.x_train,
-        "x_test": model.x_test,
-        "y_test": model.y_test,
-    }
-
-    kwargs = {
-        "dataset_name": "mnist",
-        "opt": "none",
-        "ckpt_dir": model.ckpt_dir,
-        "model": model.model,
-        "data": required_data,
-    }
-
-    result = list()
-    result.append(model.evaluate())
-
-    methods = ["fp32", "fp16", "dynamic", "uint8", "int16x8"]
-    for method in methods:
-        converter = ImageClassificationConverter(method=method, **kwargs)
-        converter.convert()
-        result.append(converter.evaluate())
-
-    # Pruning
-    pruning_model = mnist.PruningModel(path, base_model=model.model, validation_split=0.1)
-    pruning_model.create_model()
-    pruning_model.train()
-
-    result.append(pruning_model.evaluate())
-
-    kwargs["opt"] = "prune"
-    kwargs["ckpt_dir"] = pruning_model.ckpt_dir
-    kwargs["model"] = pruning_model.model
-
-    methods = ["fp32", "fp16", "dynamic", "uint8", "int16x8"]
-    for method in methods:
-        pruning_converter = ImageClassificationConverter(method=method, **kwargs)
-        pruning_converter.convert()
-        result.append(pruning_converter.evaluate())
-
-    # Quantization
-    quant_model = mnist.QuantizationModel(path, base_model=model.model, validation_split=0.1)
-    quant_model.create_model()
-    quant_model.train()
-
-    result.append(quant_model.evaluate())
-
-    kwargs["opt"] = "quantize"
-    kwargs["ckpt_dir"] = quant_model.ckpt_dir
-    kwargs["model"] = quant_model.model
-
-    # RuntimeError: Quantization to 16x8-bit not yet supported for op: 'DEQUANTIZE'
-    methods = ["fp32", "fp16", "dynamic", "uint8"]
-    for method in methods:
-        quant_converter = ImageClassificationConverter(method=method, **kwargs)
-        quant_converter.convert()
-        result.append(quant_converter.evaluate())
-
-    # Clustering
-    clustered_model = mnist.ClusteringModel(path, base_model=model.model, validation_split=0.1)
-    clustered_model.create_model()
-    clustered_model.train()
-
-    result.append(clustered_model.evaluate())
-
-    kwargs["opt"] = "cluster"
-    kwargs["ckpt_dir"] = clustered_model.ckpt_dir
-    kwargs["model"] = clustered_model.model
-
-    methods = ["fp32", "fp16", "dynamic", "uint8", "int16x8"]
-    for method in methods:
-        clustered_converter = ImageClassificationConverter(method=method, **kwargs)
-        clustered_converter.convert()
-        result.append(clustered_converter.evaluate())
-
-    # Clustering - QAT
-    clustered_qat_model = mnist.CQATModel(path, base_model=clustered_model.model, method="qat", validation_split=0.1)
-    clustered_qat_model.create_model()
-    clustered_qat_model.train()
-
-    result.append(clustered_qat_model.evaluate())
-
-    kwargs["opt"] = "cluster_qat"
-    kwargs["ckpt_dir"] = clustered_qat_model.ckpt_dir
-    kwargs["model"] = clustered_qat_model.model
-
-    methods = ["fp32", "fp16", "dynamic", "uint8"]
-    for method in methods:
-        clustered_qat_converter = ImageClassificationConverter(method=method, **kwargs)
-        clustered_qat_converter.convert()
-        result.append(clustered_qat_converter.evaluate())
-
-    # Clustering - CQAT
-    clustered_cqat_model = mnist.CQATModel(path, base_model=clustered_model.model, method="cqat",
-                                           validation_split=0.1)
-    clustered_cqat_model.create_model()
-    clustered_cqat_model.train()
-
-    result.append(clustered_cqat_model.evaluate())
-
-    kwargs["opt"] = "cluster_cqat"
-    kwargs["ckpt_dir"] = clustered_cqat_model.ckpt_dir
-    kwargs["model"] = clustered_cqat_model.model
-
-    methods = ["fp32", "fp16", "dynamic", "uint8"]
-    for method in methods:
-        clustered_cqat_converter = ImageClassificationConverter(method=method, **kwargs)
-        clustered_cqat_converter.convert()
-        result.append(clustered_cqat_converter.evaluate())
-
-    print_results(result)
 
 
 def main() -> None:
