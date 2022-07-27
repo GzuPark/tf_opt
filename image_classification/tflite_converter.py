@@ -9,10 +9,18 @@ import tensorflow as tf
 
 class ImageClassificationConverter(object):
 
-    def __init__(self, ckpt_dir: str, prefix: str, method: str, model: tf.keras.Model, data: Dict[str, Any]) -> None:
-        self._data = data
+    def __init__(self,
+                 ckpt_dir: str,
+                 dataset_name: str,
+                 opt: str,
+                 method: str,
+                 model: tf.keras.Model,
+                 data: Dict[str, Any]
+                 ) -> None:
+        self._model_path = os.path.join(ckpt_dir, f"{dataset_name}_{opt}_{method}.tflite")
         self._method = method if method in {"fp32", "fp16", "uint8", "dynamic", "int16x8"} else "dynamic"
-        self._model_path = os.path.join(ckpt_dir, f"{prefix}_{method}.tflite")
+        self._data = data
+        self._opt = opt
         self._interpreter = None
 
         self._converter = tf.lite.TFLiteConverter.from_keras_model(model)
@@ -77,6 +85,7 @@ class ImageClassificationConverter(object):
 
         result = {
             "method": self._method,
+            "opt": self._opt,
             "total_time": end_time - start_time,
             "model_file_size": os.path.getsize(self._model_path),
             "accuracy": (np.sum(self._data["y_test"] == predictions) / len(self._data["y_test"])).astype(float),
