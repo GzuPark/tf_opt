@@ -93,7 +93,6 @@ class CustomModel(object):
             "method": "keras",
             "accuracy": accuracy,
             "total_time": end_time - start_time,
-            "avg_time": (end_time - start_time) / len(self.y_test),
             "model_file_size": os.path.getsize(self._model_path),
         }
 

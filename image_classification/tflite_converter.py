@@ -11,7 +11,7 @@ class ImageClassificationConverter(object):
 
     def __init__(self, ckpt_dir: str, method: str, model: tf.keras.Model, data: Dict[str, Any]) -> None:
         self._data = data
-        self._method = method if method in {"fp32", "fp16", "uint8", "dynamic"} else "dynamic"
+        self._method = method if method in {"fp32", "fp16", "uint8", "dynamic", "int16x8"} else "dynamic"
         self._model_path = os.path.join(ckpt_dir, f"mnist_tflite_{method}.tflite")
         self._interpreter = None
 
@@ -24,6 +24,11 @@ class ImageClassificationConverter(object):
 
         if self._method == "fp16":
             self._converter.target_spec.supported_types = [tf.float16]
+        elif self._method == "int16x8":
+            self._converter.target_spec.supported_ops = [
+                tf.lite.OpsSet.EXPERIMENTAL_TFLITE_BUILTINS_ACTIVATIONS_INT16_WEIGHTS_INT8
+            ]
+            self._converter.representative_dataset = self._representative_data_gen
         elif self._method == "uint8":
             self._converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
             self._converter.representative_dataset = self._representative_data_gen
@@ -35,11 +40,10 @@ class ImageClassificationConverter(object):
             yield [input_value]
 
     def convert(self) -> None:
-
-        quant_model = self._converter.convert()
-
-        with open(self._model_path, "wb") as f:
-            f.write(quant_model)
+        if not os.path.exists(self._model_path):
+            quant_model = self._converter.convert()
+            with open(self._model_path, "wb") as f:
+                f.write(quant_model)
 
     def _get_interpreter(self) -> None:
         self._interpreter = tf.lite.Interpreter(self._model_path)
@@ -72,8 +76,8 @@ class ImageClassificationConverter(object):
         end_time = perf_counter()
 
         result = {
-            "method": self._method, "total_time": end_time - start_time,
-            "avg_time": (end_time - start_time) / len(self._data["y_test"]),
+            "method": self._method,
+            "total_time": end_time - start_time,
             "model_file_size": os.path.getsize(self._model_path),
             "accuracy": (np.sum(self._data["y_test"] == predictions) / len(self._data["y_test"])).astype(float),
         }
