@@ -190,3 +190,63 @@ class PruningModel(_BaseModel):
         }
 
         return result
+
+
+class QuantizationModel(_BaseModel):
+
+    def __init__(self,
+                 root_path: str,
+                 base_model: tf.keras.Model,
+                 validation_split: float = 0.0,
+                 reset: bool = False
+                 ) -> None:
+        super().__init__(root_path, validation_split, reset)
+        self._model_path = os.path.join(self.ckpt_dir, "mnist_quant_keras.h5")
+        self._base_model = base_model
+        self._validation_split = validation_split
+        self._batch_size = 128
+        self._epochs = 5
+
+    def create_model(self, summary: bool = False) -> None:
+        self.model = tfmot.quantization.keras.quantize_model(self._base_model)
+
+        if summary:
+            self.model.summary()
+
+    def train(self) -> None:
+        kwargs = {
+            "batch_size": self._batch_size,
+            "epochs": self._epochs,
+        }
+
+        if self._validation_split > 0:
+            kwargs["validation_split"] = self._validation_split
+
+        self.model.compile(
+            optimizer="adam",
+            loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+            metrics=["accuracy"],
+        )
+
+        if os.path.exists(self._model_path):
+            with tfmot.quantization.keras.quantize_scope():
+                self.model = tf.keras.models.load_model(self._model_path)
+        else:
+            self.model.fit(self.x_train, self.y_train, **kwargs)
+
+            tf.keras.models.save_model(self.model, self._model_path, include_optimizer=True)
+
+    def evaluate(self) -> Dict[str, Any]:
+        start_time = perf_counter()
+        _, accuracy = self.model.evaluate(self.x_test, self.y_test, verbose=0)
+        end_time = perf_counter()
+
+        result = {
+            "method": "keras",
+            "opt": "pruning",
+            "accuracy": accuracy,
+            "total_time": end_time - start_time,
+            "model_file_size": os.path.getsize(self._model_path),
+        }
+
+        return result
