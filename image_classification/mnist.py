@@ -57,7 +57,7 @@ class _BaseModel(object):
 class BasicModel(_BaseModel):
     def __init__(self, root_path: str, validation: bool = False, reset: bool = False) -> None:
         super().__init__(root_path, validation, reset)
-        self._model_path = os.path.join(self.ckpt_dir, "basic_mnist_model.h5")
+        self._model_path = os.path.join(self.ckpt_dir, "basic_mnist_keras.h5")
 
     def create_model(self, summary: bool = False) -> None:
         input_layer = tf.keras.Input(shape=(28, 28))
