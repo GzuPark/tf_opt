@@ -250,3 +250,73 @@ class QuantizationModel(_BaseModel):
         }
 
         return result
+
+
+class ClusteringModel(_BaseModel):
+
+    def __init__(self,
+                 root_path: str,
+                 base_model: tf.keras.Model,
+                 validation_split: float = 0.0,
+                 reset: bool = False
+                 ) -> None:
+        super().__init__(root_path, validation_split, reset)
+        self._model_path = os.path.join(self.ckpt_dir, "mnist_cluster_keras.h5")
+        self._base_model = base_model
+        self._validation_split = validation_split
+        self._batch_size = 128
+        self._epochs = 5
+
+    def create_model(self, summary: bool = False) -> None:
+        clustered_params = {
+            "number_of_clusters": 16,
+            "cluster_centroids_init": tfmot.clustering.keras.CentroidInitialization.LINEAR,
+        }
+
+        self.model = tfmot.clustering.keras.cluster_weights(self._base_model, **clustered_params)
+
+        if summary:
+            self.model.summary()
+
+    def _compile(self):
+        self.model.compile(
+            optimizer="adam",
+            loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+            metrics=["accuracy"],
+        )
+
+    def train(self) -> None:
+        kwargs = {
+            "batch_size": self._batch_size,
+            "epochs": self._epochs,
+        }
+
+        if self._validation_split > 0:
+            kwargs["validation_split"] = self._validation_split
+
+        self._compile()
+
+        if os.path.exists(self._model_path):
+            self.model = tf.keras.models.load_model(self._model_path)
+        else:
+            self.model.fit(self.x_train, self.y_train, **kwargs)
+
+            model_for_export = tfmot.clustering.keras.strip_clustering(self.model)
+            tf.keras.models.save_model(model_for_export, self._model_path, include_optimizer=True)
+
+    def evaluate(self) -> Dict[str, Any]:
+        self._compile()
+
+        start_time = perf_counter()
+        _, accuracy = self.model.evaluate(self.x_test, self.y_test, verbose=0)
+        end_time = perf_counter()
+
+        result = {
+            "method": "keras",
+            "opt": "clustering",
+            "accuracy": accuracy,
+            "total_time": end_time - start_time,
+            "model_file_size": os.path.getsize(self._model_path),
+        }
+
+        return result
