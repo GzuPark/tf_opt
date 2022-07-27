@@ -10,7 +10,7 @@ import tensorflow_model_optimization as tfmot
 
 class _BaseModel(object):
 
-    def __init__(self, root_path: str, validation_split: float = 0.0, reset: bool = False) -> None:
+    def __init__(self, root_path: str, validation_split: float = 0.0) -> None:
         self.ckpt_dir = os.path.join(root_path, "ckpt")
         self.model = None
         self.x_train = None
@@ -22,15 +22,10 @@ class _BaseModel(object):
         self._batch_size = 128
         self._epochs = 5
 
-        self._check_dirs(reset)
+        self._check_dirs()
         self._download_dataset()
 
-    def _check_dirs(self, reset: bool) -> None:
-        if reset:
-            for model_name in os.listdir(self.ckpt_dir):
-                if "mnist_" in model_name:
-                    os.remove(os.path.join(self.ckpt_dir, model_name))
-
+    def _check_dirs(self) -> None:
         if not os.path.exists(self.ckpt_dir):
             os.makedirs(self.ckpt_dir)
 
@@ -59,8 +54,8 @@ class _BaseModel(object):
 
 class BasicModel(_BaseModel):
 
-    def __init__(self, root_path: str, validation_split: float = 0.0, reset: bool = False) -> None:
-        super().__init__(root_path, validation_split, reset)
+    def __init__(self, root_path: str, validation_split: float = 0.0) -> None:
+        super().__init__(root_path, validation_split)
         self._model_path = os.path.join(self.ckpt_dir, "mnist_none_keras.h5")
         self._validation_split = validation_split
         self._batch_size = 128
@@ -118,13 +113,8 @@ class BasicModel(_BaseModel):
 
 class PruningModel(_BaseModel):
 
-    def __init__(self,
-                 root_path: str,
-                 base_model: tf.keras.Model,
-                 validation_split: float = 0.0,
-                 reset: bool = False
-                 ) -> None:
-        super().__init__(root_path, validation_split, reset)
+    def __init__(self, root_path: str, base_model: tf.keras.Model, validation_split: float = 0.0) -> None:
+        super().__init__(root_path, validation_split)
         self._model_path = os.path.join(self.ckpt_dir, "mnist_prune_keras.h5")
         self._base_model = base_model
         self._validation_split = validation_split
@@ -194,13 +184,8 @@ class PruningModel(_BaseModel):
 
 class QuantizationModel(_BaseModel):
 
-    def __init__(self,
-                 root_path: str,
-                 base_model: tf.keras.Model,
-                 validation_split: float = 0.0,
-                 reset: bool = False
-                 ) -> None:
-        super().__init__(root_path, validation_split, reset)
+    def __init__(self, root_path: str, base_model: tf.keras.Model, validation_split: float = 0.0) -> None:
+        super().__init__(root_path, validation_split)
         self._model_path = os.path.join(self.ckpt_dir, "mnist_quantize_keras.h5")
         self._base_model = base_model
         self._validation_split = validation_split
@@ -254,13 +239,8 @@ class QuantizationModel(_BaseModel):
 
 class ClusteringModel(_BaseModel):
 
-    def __init__(self,
-                 root_path: str,
-                 base_model: tf.keras.Model,
-                 validation_split: float = 0.0,
-                 reset: bool = False
-                 ) -> None:
-        super().__init__(root_path, validation_split, reset)
+    def __init__(self, root_path: str, base_model: tf.keras.Model, validation_split: float = 0.0) -> None:
+        super().__init__(root_path, validation_split)
         self._model_path = os.path.join(self.ckpt_dir, f"mnist_cluster_keras.h5")
         self._base_model = base_model
         self._validation_split = validation_split
@@ -336,9 +316,8 @@ class CQATModel(_BaseModel):
                  base_model: tf.keras.Model,
                  method: str = "CQAT",
                  validation_split: float = 0.0,
-                 reset: bool = False
                  ) -> None:
-        super().__init__(root_path, validation_split, reset)
+        super().__init__(root_path, validation_split)
         self._model_path = os.path.join(self.ckpt_dir, f"mnist_cluster_{method}_keras.h5")
         self._base_model = base_model
         self._method = method.lower() if method.lower() in {"qat", "cqat"} else "cqat"
@@ -395,7 +374,7 @@ class CQATModel(_BaseModel):
             "opt": f"cluster_{self._method}",
             "accuracy": accuracy,
             "total_time": end_time - start_time,
-            "model_file_size": os.path.getsize(self._model_path) if os.path.exists(self._model_path) else 0,
+            "model_file_size": os.path.getsize(self._model_path),
         }
 
         return result
