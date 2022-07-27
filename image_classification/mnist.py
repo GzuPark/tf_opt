@@ -16,8 +16,6 @@ class CustomModel(object):
         self.y_train = None
         self.x_test = None
         self.y_test = None
-        self.x_val = None
-        self.y_val = None
         self._data_dir = os.path.join(root_path, "data", "mnist_data")
         self._model_path = os.path.join(self.ckpt_dir, "mnist_keras_model.h5")
         self._validation = validation
@@ -47,13 +45,6 @@ class CustomModel(object):
         self.x_train = self.x_train.astype(np.float32) / 255.0
         self.x_test = self.x_test.astype(np.float32) / 255.0
 
-        if self._validation:
-            self.x_val = self.x_train[50000:]
-            self.y_val = self.y_train[50000:]
-
-            self.x_train = self.x_train[:50000]
-            self.y_train = self.y_train[:50000]
-
     def create_model(self, summary: bool = False) -> None:
         input_layer = tf.keras.Input(shape=(28, 28))
         x = tf.keras.layers.Reshape(target_shape=(28, 28, 1))(input_layer)
@@ -70,7 +61,7 @@ class CustomModel(object):
     def train(self) -> None:
         kwargs = {"epochs": 5}
         if self._validation:
-            kwargs["validation_data"] = (self.x_val, self.y_val)
+            kwargs["validation_split"] = 0.1
 
         if os.path.exists(self._model_path):
             self.model = tf.keras.models.load_model(self._model_path)
