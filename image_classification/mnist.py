@@ -125,7 +125,7 @@ class PruningModel(_BaseModel):
                  reset: bool = False
                  ) -> None:
         super().__init__(root_path, validation_split, reset)
-        self._model_path = os.path.join(self.ckpt_dir, "mnist_pruning_keras.h5")
+        self._model_path = os.path.join(self.ckpt_dir, "mnist_prune_keras.h5")
         self._base_model = base_model
         self._validation_split = validation_split
         self._batch_size = 128
@@ -183,7 +183,7 @@ class PruningModel(_BaseModel):
 
         result = {
             "method": "keras",
-            "opt": "pruning",
+            "opt": "prune",
             "accuracy": accuracy,
             "total_time": end_time - start_time,
             "model_file_size": os.path.getsize(self._model_path),
@@ -201,7 +201,7 @@ class QuantizationModel(_BaseModel):
                  reset: bool = False
                  ) -> None:
         super().__init__(root_path, validation_split, reset)
-        self._model_path = os.path.join(self.ckpt_dir, "mnist_quant_keras.h5")
+        self._model_path = os.path.join(self.ckpt_dir, "mnist_quantize_keras.h5")
         self._base_model = base_model
         self._validation_split = validation_split
         self._batch_size = 128
@@ -243,7 +243,7 @@ class QuantizationModel(_BaseModel):
 
         result = {
             "method": "keras",
-            "opt": "pruning",
+            "opt": "quantize",
             "accuracy": accuracy,
             "total_time": end_time - start_time,
             "model_file_size": os.path.getsize(self._model_path),
@@ -261,16 +261,22 @@ class ClusteringModel(_BaseModel):
                  reset: bool = False
                  ) -> None:
         super().__init__(root_path, validation_split, reset)
-        self._model_path = os.path.join(self.ckpt_dir, "mnist_cluster_keras.h5")
+        self._model_path = os.path.join(self.ckpt_dir, f"mnist_cluster_keras.h5")
         self._base_model = base_model
         self._validation_split = validation_split
         self._batch_size = 128
         self._epochs = 5
 
     def create_model(self, summary: bool = False) -> None:
+        # clustered_params = {
+        #     "number_of_clusters": 16,
+        #     "cluster_centroids_init": tfmot.clustering.keras.CentroidInitialization.LINEAR,
+        # }
+
         clustered_params = {
-            "number_of_clusters": 16,
-            "cluster_centroids_init": tfmot.clustering.keras.CentroidInitialization.LINEAR,
+            "number_of_clusters": 8,
+            "cluster_centroids_init": tfmot.clustering.keras.CentroidInitialization.KMEANS_PLUS_PLUS,
+            "cluster_per_channel": True,
         }
 
         self.model = tfmot.clustering.keras.cluster_weights(self._base_model, **clustered_params)
@@ -313,10 +319,83 @@ class ClusteringModel(_BaseModel):
 
         result = {
             "method": "keras",
-            "opt": "clustering",
+            "opt": "cluster",
             "accuracy": accuracy,
             "total_time": end_time - start_time,
             "model_file_size": os.path.getsize(self._model_path),
+        }
+
+        return result
+
+
+class CQATModel(_BaseModel):
+    """Cluster preserving quantization aware training"""
+
+    def __init__(self,
+                 root_path: str,
+                 base_model: tf.keras.Model,
+                 method: str = "CQAT",
+                 validation_split: float = 0.0,
+                 reset: bool = False
+                 ) -> None:
+        super().__init__(root_path, validation_split, reset)
+        self._model_path = os.path.join(self.ckpt_dir, f"mnist_cluster_{method}_keras.h5")
+        self._base_model = base_model
+        self._method = method.lower() if method.lower() in {"qat", "cqat"} else "cqat"
+        self._validation_split = validation_split
+        self._batch_size = 128
+        self._epochs = 5
+
+    def create_model(self, summary: bool = False) -> None:
+        if self._method == "qat":
+            self.model = tfmot.quantization.keras.quantize_model(self._base_model)
+        elif self._method == "cqat":
+            quant_aware_annotate_model = tfmot.quantization.keras.quantize_annotate_model(self._base_model)
+            self.model = tfmot.quantization.keras.quantize_apply(
+                quant_aware_annotate_model,
+                tfmot.experimental.combine.Default8BitClusterPreserveQuantizeScheme(),
+            )
+
+        if summary:
+            self.model.summary()
+
+    def _compile(self):
+        self.model.compile(
+            optimizer="adam",
+            loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+            metrics=["accuracy"],
+        )
+
+    def train(self) -> None:
+        kwargs = {
+            "batch_size": self._batch_size,
+            "epochs": self._epochs,
+        }
+
+        if self._validation_split > 0:
+            kwargs["validation_split"] = self._validation_split
+
+        self._compile()
+
+        if os.path.exists(self._model_path) and self._method != "cqat":
+            with tfmot.quantization.keras.quantize_scope():
+                self.model = tf.keras.models.load_model(self._model_path)
+        else:
+            self.model.fit(self.x_train, self.y_train, **kwargs)
+
+            tf.keras.models.save_model(self.model, self._model_path, include_optimizer=True)
+
+    def evaluate(self) -> Dict[str, Any]:
+        start_time = perf_counter()
+        _, accuracy = self.model.evaluate(self.x_test, self.y_test, verbose=0)
+        end_time = perf_counter()
+
+        result = {
+            "method": "keras",
+            "opt": f"cluster_{self._method}",
+            "accuracy": accuracy,
+            "total_time": end_time - start_time,
+            "model_file_size": os.path.getsize(self._model_path) if os.path.exists(self._model_path) else 0,
         }
 
         return result
