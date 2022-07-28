@@ -23,7 +23,7 @@ class _BaseModel(object):
         self._epochs = 5
 
         self._check_dirs()
-        self._download_dataset()
+        self._load_dataset()
 
     def _check_dirs(self) -> None:
         if not os.path.exists(self.ckpt_dir):
@@ -32,7 +32,7 @@ class _BaseModel(object):
         if not os.path.exists(self._data_dir):
             os.makedirs(self._data_dir)
 
-    def _download_dataset(self) -> None:
+    def _load_dataset(self) -> None:
         data_path = os.path.join(self._data_dir, "mnist.npz")
         train_dataset, test_dateset = tf.keras.datasets.mnist.load_data(path=data_path)
 
