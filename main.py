@@ -100,13 +100,25 @@ def run_mnist(path: str) -> None:
     tflite_kwargs["optimizer"] = "prune_pqat"
     result.extend(run_modules(mnist.PQATModel, keras_kwargs, tflite_kwargs, tflite_methods_1))
 
+    # Pruning & Clustering - QAT
+    keras_kwargs["base_model_name"] = "mnist_prune_keras.h5"
+    keras_kwargs["method"] = "qat"
+    tflite_kwargs["optimizer"] = "prune_cluster_qat"
+    result.extend(run_modules(mnist.PCQATModel, keras_kwargs, tflite_kwargs, tflite_methods_1))
+
+    # Pruning & Clustering - PCQAT
+    keras_kwargs["base_model_name"] = "mnist_prune_keras.h5"
+    keras_kwargs["method"] = "pcqat"
+    tflite_kwargs["optimizer"] = "prune_cluster_pcqat"
+    result.extend(run_modules(mnist.PCQATModel, keras_kwargs, tflite_kwargs, tflite_methods_1))
+
     # Print out
     print_results(result)
 
 
 def print_results(result: List[Dict[str, Any]]) -> None:
-    print(f"| {'Method':>10} | {'Model optimize':>15} | {'Accuracy':>12} | {'Total time':>15} | {'File size':>15} |")
-    print(f"|{'-' * 11}:|{'-' * 16}:|{'-' * 13}:|{'-' * 16}:|{'-' * 16}:|")
+    print(f"| {'Method':>10} | {'Model optimize':>20} | {'Accuracy':>12} | {'Total time':>15} | {'File size':>15} |")
+    print(f"|{'-' * 11}:|{'-' * 21}:|{'-' * 13}:|{'-' * 16}:|{'-' * 16}:|")
 
     for res in result:
         _method = res['method']
@@ -114,7 +126,7 @@ def print_results(result: List[Dict[str, Any]]) -> None:
         _acc = res['accuracy'] * 100
         _time = res['total_time'] * 1000
         _size = res['model_file_size'] / 1024
-        print(f"| {_method:>10} | {_opt:>15} | {_acc:>10.2f} % | {_time:>12.1f} ms | {_size:>12.2f} KB |")
+        print(f"| {_method:>10} | {_opt:>20} | {_acc:>10.2f} % | {_time:>12.1f} ms | {_size:>12.2f} KB |")
 
 
 def main() -> None:

@@ -6,6 +6,7 @@ from typing import Any, Dict
 import numpy as np
 import tensorflow as tf
 import tensorflow_model_optimization as tfmot
+import tensorflow_model_optimization.python.core.clustering.keras.experimental.cluster as pc_cluster
 
 
 def load_dataset(root_dir: str) -> Dict[str, np.ndarray]:
@@ -547,6 +548,131 @@ class PQATModel(_BaseModel):
         result = dict()
         result["method"] = "keras"
         result["opt"] = f"prune_{self._method}"
+        result["accuracy"] = accuracy
+        result["total_time"] = end_time - start_time
+        result["model_file_size"] = os.path.getsize(self.model_path)
+
+        return result
+
+
+class PCQATModel(_BaseModel):
+    """Sparsity and cluster preserving quantization aware training"""
+
+    def __init__(
+            self,
+            root_dir: str,
+            base_model_name: str,
+            dataset: Dict[str, Any],
+            valid_split: float,
+            batch_size: int,
+            epochs: int,
+            method: str = "PCQAT",
+            verbose: bool = False,
+    ) -> None:
+        super().__init__(root_dir, dataset, batch_size, epochs, valid_split)
+
+        self.model = None
+        self.model_path = os.path.join(self.ckpt_dir, f"mnist_prune_cluster_{method}_keras.h5")
+        self.verbose = 1 if verbose else 0
+        self._method = method.lower() if method.lower() in {"qat", "pcqat"} else "pcqat"
+        self._base_model = None
+        self._pre_model = None
+
+        base_model_path = os.path.join(self.ckpt_dir, base_model_name)
+        if os.path.exists(base_model_path):
+            self._base_model = tf.keras.models.load_model(base_model_path)
+        else:
+            raise ValueError(f"Do not exist {base_model_path} file.\nTry train the BasicModel.")
+
+        print(f"Run pruning-clustering {method.upper()}")
+
+    def _prepare_clustered_model(self, model_path: str) -> None:
+        """Apply sparsity preserving clustering and check its effect on model sparsity in both cases"""
+        print("Prepare the sparsity preserving clustering model.")
+
+        clustering_params = dict()
+        clustering_params["number_of_clusters"] = 8
+        clustering_params["cluster_centroids_init"] = tfmot.clustering.keras.CentroidInitialization.KMEANS_PLUS_PLUS
+        clustering_params["preserve_sparsity"] = True
+
+        self._pre_model = pc_cluster.cluster_weights(self._base_model, **clustering_params)
+
+        self._pre_model.compile(
+            optimizer="adam",
+            loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+            metrics=["accuracy"],
+        )
+
+        train_kwargs = dict()
+        train_kwargs["batch_size"] = self.batch_size
+        train_kwargs["epochs"] = self.epochs
+        train_kwargs["validation_split"] = self.valid_split
+        train_kwargs["verbose"] = self.verbose
+
+        self._pre_model.fit(self.x_train, self.y_train, **train_kwargs)
+
+        model_for_export = tfmot.clustering.keras.strip_clustering(self._pre_model)
+        tf.keras.models.save_model(model_for_export, model_path, include_optimizer=True)
+
+    def _get_qat_model(self) -> Any:
+        return tfmot.quantization.keras.quantize_model(self._pre_model)
+
+    def _get_pcqat_model(self) -> Any:
+        return tfmot.quantization.keras.quantize_apply(
+            tfmot.quantization.keras.quantize_annotate_model(self._pre_model),
+            tfmot.experimental.combine.Default8BitClusterPreserveQuantizeScheme(preserve_sparsity=True),
+        )
+
+    def create_model(self) -> None:
+        _pre_model_path = os.path.join(self.ckpt_dir, f"mnist_prune_cluster_pre_keras.h5")
+        if not os.path.exists(_pre_model_path):
+            self._prepare_clustered_model(_pre_model_path)
+        else:
+            self._pre_model = tf.keras.models.load_model(_pre_model_path)
+
+        models = dict()
+        models["qat"] = self._get_qat_model
+        models["pcqat"] = self._get_pcqat_model
+
+        target_model = models.get(self._method, self._get_pcqat_model)
+        self.model = target_model()
+
+        if self.verbose:
+            self.model.summary()
+
+    def _compile(self) -> None:
+        self.model.compile(
+            optimizer="adam",
+            loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+            metrics=["accuracy"],
+        )
+
+    def train(self) -> None:
+        # TODO: CQAT can save, but load model has issues
+        if os.path.exists(self.model_path) and self._method != "pcqat":
+            with tfmot.quantization.keras.quantize_scope():
+                self.model = tf.keras.models.load_model(self.model_path)
+            return
+
+        train_kwargs = dict()
+        train_kwargs["batch_size"] = self.batch_size
+        train_kwargs["epochs"] = self.epochs
+        train_kwargs["validation_split"] = self.valid_split
+        train_kwargs["verbose"] = self.verbose
+
+        self._compile()
+        self.model.fit(self.x_train, self.y_train, **train_kwargs)
+
+        tf.keras.models.save_model(self.model, self.model_path, include_optimizer=True)
+
+    def evaluate(self) -> Dict[str, Any]:
+        start_time = perf_counter()
+        _, accuracy = self.model.evaluate(self.x_test, self.y_test, verbose=self.verbose)
+        end_time = perf_counter()
+
+        result = dict()
+        result["method"] = "keras"
+        result["opt"] = f"prune_cluster_{self._method}"
         result["accuracy"] = accuracy
         result["total_time"] = end_time - start_time
         result["model_file_size"] = os.path.getsize(self.model_path)
