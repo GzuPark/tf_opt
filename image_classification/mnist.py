@@ -266,7 +266,7 @@ class BasicModel(_BaseModel):
 
         result = dict()
         result["method"] = "keras"
-        result["opt"] = "None"
+        result["opt"] = "none"
         result["accuracy"] = accuracy
         result["total_time"] = end_time - start_time
         result["model_file_size"] = os.path.getsize(self.model_path)

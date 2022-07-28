@@ -15,7 +15,7 @@ the [model optimization reference from TensorFlow](https://www.tensorflow.org/mo
 
 |     Method |      Model optimize |     Accuracy |      Total time |       File size |
 |-----------:|--------------------:|-------------:|----------------:|----------------:|
-|      keras |                None |      97.50 % |        298.8 ms |       266.47 KB |
+|      keras |                none |      97.50 % |        298.8 ms |       266.47 KB |
 |       fp32 |                none |      97.50 % |        371.8 ms |        82.63 KB |
 |       fp16 |                none |      97.50 % |        368.2 ms |        43.34 KB |
 |    dynamic |                none |      97.50 % |        368.1 ms |        23.30 KB |
