@@ -41,3 +41,13 @@
 |       fp16 |    cluster_cqat |      97.66 % |        330.5 ms |        24.16 KB |
 |    dynamic |    cluster_cqat |      97.66 % |        333.0 ms |        24.16 KB |
 |      uint8 |    cluster_cqat |      97.65 % |        351.8 ms |        24.20 KB |
+|      keras |       prune_qat |      97.72 % |        630.1 ms |       283.45 KB |
+|       fp32 |       prune_qat |      97.72 % |        410.4 ms |       167.73 KB |
+|       fp16 |       prune_qat |      97.72 % |        326.0 ms |        24.16 KB |
+|    dynamic |       prune_qat |      97.72 % |        327.8 ms |        24.16 KB |
+|      uint8 |       prune_qat |      97.72 % |        327.5 ms |        24.16 KB |
+|      keras |      prune_pqat |      97.48 % |        646.1 ms |       283.45 KB |
+|       fp32 |      prune_pqat |      97.51 % |        409.4 ms |       167.73 KB |
+|       fp16 |      prune_pqat |      97.48 % |        326.2 ms |        24.16 KB |
+|    dynamic |      prune_pqat |      97.48 % |        326.1 ms |        24.16 KB |
+|      uint8 |      prune_pqat |      97.48 % |        326.8 ms |        24.16 KB |
