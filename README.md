@@ -1,5 +1,12 @@
 # Test TensorFlow Model Optimization
 
+Try to follow
+the [model optimization reference from TensorFlow](https://www.tensorflow.org/model_optimization/guide/get_started)
+& [TFLite optimized model guide](https://www.tensorflow.org/lite/performance/model_optimization).
+
+![TFLite_quantization_decision_tree](https://www.tensorflow.org/static/lite/performance/images/quantization_decision_tree.png)
+![TFMOT_collaborative_optimization](https://www.tensorflow.org/static/model_optimization/guide/combine/images/collaborative_optimization.png)
+
 - Test on the Apple M1 Pro & `tensorflow-macos==2.9.2`
 
 ## Image classification
