@@ -33,10 +33,17 @@ def load_dataset(root_dir: str) -> Dict[str, np.ndarray]:
 
 class _BaseModel(object):
 
-    def __init__(self, root_dir: str, dataset: Dict[str, Any], valid_split: float = 0.0) -> None:
+    def __init__(
+            self,
+            root_dir: str,
+            dataset: Dict[str, Any],
+            batch_size: int = 128,
+            epochs: int = 5,
+            valid_split: float = 0.0,
+    ) -> None:
         self.valid_split = valid_split
-        self.batch_size = 128
-        self.epochs = 5
+        self.batch_size = batch_size
+        self.epochs = epochs
 
         self.x_train = dataset["x_train"]
         self.y_train = dataset["y_train"]
@@ -66,10 +73,12 @@ class BasicModel(_BaseModel):
             self,
             root_dir: str,
             dataset: Dict[str, Any],
+            batch_size: int,
+            epochs: int,
             valid_split: float,
-            verbose: bool = False
+            verbose: bool = False,
     ) -> None:
-        super().__init__(root_dir, dataset, valid_split)
+        super().__init__(root_dir, dataset, batch_size, epochs, valid_split)
 
         self.model = None
         self.model_path = os.path.join(self.ckpt_dir, "mnist_none_keras.h5")
@@ -136,9 +145,11 @@ class PruningModel(_BaseModel):
             base_model_name: str,
             dataset: Dict[str, Any],
             valid_split: float,
-            verbose: bool = False
+            batch_size: int,
+            epochs: int,
+            verbose: bool = False,
     ) -> None:
-        super().__init__(root_dir, dataset, valid_split)
+        super().__init__(root_dir, dataset, batch_size, epochs, valid_split)
 
         self.model = None
         self.model_path = os.path.join(self.ckpt_dir, "mnist_prune_keras.h5")
@@ -219,9 +230,11 @@ class QuantizationModel(_BaseModel):
             base_model_name: str,
             dataset: Dict[str, Any],
             valid_split: float,
-            verbose: bool = False
+            batch_size: int,
+            epochs: int,
+            verbose: bool = False,
     ) -> None:
-        super().__init__(root_dir, dataset, valid_split)
+        super().__init__(root_dir, dataset, batch_size, epochs, valid_split)
 
         self.model = None
         self.model_path = os.path.join(self.ckpt_dir, "mnist_quantize_keras.h5")
@@ -289,9 +302,11 @@ class ClusteringModel(_BaseModel):
             base_model_name: str,
             dataset: Dict[str, Any],
             valid_split: float,
-            verbose: bool = False
+            batch_size: int,
+            epochs: int,
+            verbose: bool = False,
     ) -> None:
-        super().__init__(root_dir, dataset, valid_split)
+        super().__init__(root_dir, dataset, batch_size, epochs, valid_split)
 
         self.model = None
         self.model_path = os.path.join(self.ckpt_dir, "mnist_cluster_keras.h5")
@@ -369,10 +384,12 @@ class CQATModel(_BaseModel):
             base_model_name: str,
             dataset: Dict[str, Any],
             valid_split: float,
+            batch_size: int,
+            epochs: int,
             method: str = "CQAT",
-            verbose: bool = False
+            verbose: bool = False,
     ) -> None:
-        super().__init__(root_dir, dataset, valid_split)
+        super().__init__(root_dir, dataset, batch_size, epochs, valid_split)
 
         self.model = None
         self.model_path = os.path.join(self.ckpt_dir, f"mnist_cluster_{method}_keras.h5")
@@ -457,10 +474,12 @@ class PQATModel(_BaseModel):
             base_model_name: str,
             dataset: Dict[str, Any],
             valid_split: float,
+            batch_size: int,
+            epochs: int,
             method: str = "PQAT",
-            verbose: bool = False
+            verbose: bool = False,
     ) -> None:
-        super().__init__(root_dir, dataset, valid_split)
+        super().__init__(root_dir, dataset, batch_size, epochs, valid_split)
 
         self.model = None
         self.model_path = os.path.join(self.ckpt_dir, f"mnist_prune_{method}_keras.h5")

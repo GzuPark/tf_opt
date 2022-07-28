@@ -47,6 +47,8 @@ def run_mnist(path: str) -> None:
     keras_kwargs = dict()
     keras_kwargs["root_dir"] = path
     keras_kwargs["dataset"] = dataset
+    keras_kwargs["batch_size"] = 128
+    keras_kwargs["epochs"] = 5
     keras_kwargs["valid_split"] = 0.1
     keras_kwargs["verbose"] = False
 
