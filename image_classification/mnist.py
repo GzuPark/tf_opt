@@ -340,10 +340,12 @@ class CQATModel(_BaseModel):
         )
 
     def create_model(self, summary: bool = False) -> None:
-        if self._method == "qat":
-            self.model = self._get_qat_model()
-        elif self._method == "cqat":
-            self.model = self._get_cqat_model()
+        models = dict()
+        models["qat"] = self._get_qat_model
+        models["cqat"] = self._get_cqat_model
+
+        target_model = models.get(self._method, self._get_cqat_model)
+        self.model = target_model()
 
         if summary:
             self.model.summary()

@@ -27,21 +27,40 @@ class ImageClassificationConverter(object):
         self._initialize()
 
     def _initialize(self) -> None:
-        if self._method != "fp32":
-            self._converter.optimizations = [tf.lite.Optimize.DEFAULT]
+        optimizers = dict()
 
-        if self._method == "fp16":
-            self._converter.target_spec.supported_types = [tf.float16]
-        elif self._method == "int16x8":
-            self._converter.target_spec.supported_ops = [
-                tf.lite.OpsSet.EXPERIMENTAL_TFLITE_BUILTINS_ACTIVATIONS_INT16_WEIGHTS_INT8
-            ]
-            self._converter.representative_dataset = self._representative_data_gen
-        elif self._method == "uint8":
-            self._converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
-            self._converter.representative_dataset = self._representative_data_gen
-            self._converter.inference_input_type = tf.uint8
-            self._converter.inference_output_type = tf.uint8
+        optimizers["fp32"] = self._get_fp32
+        optimizers["fp16"] = self._get_fp16
+        optimizers["dynamic"] = self._get_dynamic
+        optimizers["uin8"] = self._get_uint8
+        optimizers["int16x8"] = self._get_int16x8
+
+        target_optimizer = optimizers.get(self._method, self._get_dynamic)
+        target_optimizer()
+
+    def _get_fp32(self) -> None:
+        return
+
+    def _get_dynamic(self) -> None:
+        self._converter.optimizations = [tf.lite.Optimize.DEFAULT]
+
+    def _get_fp16(self) -> None:
+        self._converter.optimizations = [tf.lite.Optimize.DEFAULT]
+        self._converter.target_spec.supported_types = [tf.float16]
+
+    def _get_uint8(self) -> None:
+        self._converter.optimizations = [tf.lite.Optimize.DEFAULT]
+        self._converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
+        self._converter.representative_dataset = self._representative_data_gen
+        self._converter.inference_input_type = tf.uint8
+        self._converter.inference_output_type = tf.uint8
+
+    def _get_int16x8(self) -> None:
+        self._converter.optimizations = [tf.lite.Optimize.DEFAULT]
+        self._converter.target_spec.supported_ops = [
+            tf.lite.OpsSet.EXPERIMENTAL_TFLITE_BUILTINS_ACTIVATIONS_INT16_WEIGHTS_INT8
+        ]
+        self._converter.representative_dataset = self._representative_data_gen
 
     def _representative_data_gen(self) -> Any:
         for input_value in tf.data.Dataset.from_tensor_slices(self._data["x_train"]).batch(1).take(100):
@@ -83,12 +102,11 @@ class ImageClassificationConverter(object):
 
         end_time = perf_counter()
 
-        result = {
-            "method": self._method,
-            "opt": self._opt,
-            "total_time": end_time - start_time,
-            "model_file_size": os.path.getsize(self._model_path),
-            "accuracy": (np.sum(self._data["y_test"] == predictions) / len(self._data["y_test"])).astype(float),
-        }
+        result = dict()
+        result["method"] = self._method
+        result["opt"] = self._opt
+        result["total_time"] = end_time - start_time
+        result["model_file_size"] = os.path.getsize(self._model_path)
+        result["accuracy"] = (np.sum(self._data["y_test"] == predictions) / len(self._data["y_test"])).astype(float)
 
         return result
