@@ -1,6 +1,10 @@
+import gc
 import os.path
 
+from time import sleep
 from typing import Any, Dict, List
+
+import tensorflow as tf
 
 from image_classification import mnist, ImageClassificationConverter
 from utils import set_seed
@@ -11,8 +15,11 @@ def run_modules(
         keras_kwargs: Dict[str, Any],
         tflite_kwargs: Dict[str, Any],
         tflite_methods: List[str],
-        is_base: bool = False,
 ) -> List[Dict[str, Any]]:
+    tf.keras.backend.clear_session()
+    gc.collect()
+    sleep(2)
+
     result = list()
 
     model = module(**keras_kwargs)
@@ -20,19 +27,9 @@ def run_modules(
     model.train()
     result.append(model.evaluate())
 
-    if is_base:
-        keras_kwargs["base_model"] = model.model
-
-        tflite_kwargs["ckpt_dir"] = model.ckpt_dir
-        tflite_kwargs["model"] = model.model
-        tflite_kwargs["data"] = {"x_train": model.x_train, "x_test": model.x_test, "y_test": model.y_test}
-
-    tflite_kwargs["ckpt_dir"] = model.ckpt_dir
-    tflite_kwargs["model"] = model.model
-
     for method in tflite_methods:
         converter = ImageClassificationConverter(method=method, **tflite_kwargs)
-        converter.convert()
+        converter.convert(model=model.model)
         result.append(converter.evaluate())
 
     return result
@@ -45,38 +42,48 @@ def run_mnist(path: str) -> None:
     tflite_methods_1 = ["fp32", "fp16", "dynamic", "uint8"]
     tflite_methods_2 = tflite_methods_1 + ["int16x8"]
 
+    dataset = mnist.load_dataset(path)
+
     keras_kwargs = dict()
-    keras_kwargs["root_path"] = path
-    keras_kwargs["validation_split"] = 0.1
+    keras_kwargs["root_dir"] = path
+    keras_kwargs["dataset"] = dataset
+    keras_kwargs["valid_split"] = 0.1
+    keras_kwargs["verbose"] = False
 
     tflite_kwargs = dict()
+    tflite_kwargs["root_dir"] = path
     tflite_kwargs["dataset_name"] = "mnist"
+    tflite_kwargs["dataset"] = dataset
 
     # No optimized
-    tflite_kwargs["opt"] = "none"
-    result.extend(run_modules(mnist.BasicModel, keras_kwargs, tflite_kwargs, tflite_methods_2, True))
+    tflite_kwargs["optimizer"] = "none"
+    result.extend(run_modules(mnist.BasicModel, keras_kwargs, tflite_kwargs, tflite_methods_2))
 
     # Pruning
-    tflite_kwargs["opt"] = "prune"
+    keras_kwargs["base_model_name"] = "mnist_none_keras.h5"
+    tflite_kwargs["optimizer"] = "prune"
     result.extend(run_modules(mnist.PruningModel, keras_kwargs, tflite_kwargs, tflite_methods_2))
 
     # Quantization
-    tflite_kwargs["opt"] = "quantize"
+    keras_kwargs["base_model_name"] = "mnist_none_keras.h5"
+    tflite_kwargs["optimizer"] = "quantize"
     result.extend(run_modules(mnist.QuantizationModel, keras_kwargs, tflite_kwargs, tflite_methods_1))
 
     # Clustering
-    tflite_kwargs["opt"] = "cluster"
+    keras_kwargs["base_model_name"] = "mnist_none_keras.h5"
+    tflite_kwargs["optimizer"] = "cluster"
     result.extend(run_modules(mnist.ClusteringModel, keras_kwargs, tflite_kwargs, tflite_methods_2))
 
     # Clustering - QAT
-    keras_kwargs["base_model"] = tflite_kwargs["model"]
+    keras_kwargs["base_model_name"] = "mnist_cluster_keras.h5"
     keras_kwargs["method"] = "qat"
-    tflite_kwargs["opt"] = "cluster_qat"
+    tflite_kwargs["optimizer"] = "cluster_qat"
     result.extend(run_modules(mnist.CQATModel, keras_kwargs, tflite_kwargs, tflite_methods_1))
 
     # Clustering - CQAT
+    keras_kwargs["base_model_name"] = "mnist_cluster_keras.h5"
     keras_kwargs["method"] = "cqat"
-    tflite_kwargs["opt"] = "cluster_cqat"
+    tflite_kwargs["optimizer"] = "cluster_cqat"
     result.extend(run_modules(mnist.CQATModel, keras_kwargs, tflite_kwargs, tflite_methods_1))
 
     # Print out

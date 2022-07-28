@@ -9,22 +9,22 @@ import tensorflow as tf
 
 class ImageClassificationConverter(object):
 
-    def __init__(self,
-                 ckpt_dir: str,
-                 dataset_name: str,
-                 opt: str,
-                 method: str,
-                 model: tf.keras.Model,
-                 data: Dict[str, Any]
-                 ) -> None:
-        self._model_path = os.path.join(ckpt_dir, f"{dataset_name}_{opt}_{method}.tflite")
-        self._method = method if method in {"fp32", "fp16", "uint8", "dynamic", "int16x8"} else "dynamic"
-        self._data = data
-        self._opt = opt
-        self._interpreter = None
+    def __init__(
+            self,
+            root_dir: str,
+            dataset_name: str,
+            dataset: Dict[str, Any],
+            optimizer: str,
+            method: str = "dynamic",
+    ) -> None:
+        self.data = dataset
 
-        self._converter = tf.lite.TFLiteConverter.from_keras_model(model)
-        self._initialize()
+        self._ckpt_dir = os.path.join(root_dir, "ckpt")
+        self._model_path = os.path.join(self._ckpt_dir, f"{dataset_name}_{optimizer}_{method}.tflite")
+        self._method = method if method in {"fp32", "fp16", "uint8", "dynamic", "int16x8"} else "dynamic"
+        self._optimizer = optimizer
+        self._converter = None
+        self._interpreter = None
 
     def _initialize(self) -> None:
         optimizers = dict()
@@ -63,10 +63,16 @@ class ImageClassificationConverter(object):
         self._converter.representative_dataset = self._representative_data_gen
 
     def _representative_data_gen(self) -> Any:
-        for input_value in tf.data.Dataset.from_tensor_slices(self._data["x_train"]).batch(1).take(100):
+        for input_value in tf.data.Dataset.from_tensor_slices(self.data["x_train"]).batch(1).take(100):
             yield [input_value]
 
-    def convert(self) -> None:
+    def convert(self, model: tf.keras.Model) -> None:
+        if os.path.exists(self._model_path):
+            return
+
+        self._converter = tf.lite.TFLiteConverter.from_keras_model(model)
+        self._initialize()
+
         if not os.path.exists(self._model_path):
             quant_model = self._converter.convert()
             with open(self._model_path, "wb") as f:
@@ -82,12 +88,12 @@ class ImageClassificationConverter(object):
         input_details = self._interpreter.get_input_details()[0]
         output_details = self._interpreter.get_output_details()[0]
 
-        x_test_indices = range(self._data["x_test"].shape[0])
+        x_test_indices = range(self.data["x_test"].shape[0])
         predictions = np.zeros((len(x_test_indices),), dtype=int)
 
         start_time = perf_counter()
         for i, idx in enumerate(x_test_indices):
-            test_image = self._data["x_test"][idx]
+            test_image = self.data["x_test"][idx]
 
             if input_details["dtype"] == np.uint8:
                 input_scale, input_zero_point = input_details["quantization"]
@@ -104,9 +110,9 @@ class ImageClassificationConverter(object):
 
         result = dict()
         result["method"] = self._method
-        result["opt"] = self._opt
+        result["opt"] = self._optimizer
         result["total_time"] = end_time - start_time
         result["model_file_size"] = os.path.getsize(self._model_path)
-        result["accuracy"] = (np.sum(self._data["y_test"] == predictions) / len(self._data["y_test"])).astype(float)
+        result["accuracy"] = (np.sum(self.data["y_test"] == predictions) / len(self.data["y_test"])).astype(float)
 
         return result
