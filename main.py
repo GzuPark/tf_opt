@@ -86,6 +86,18 @@ def run_mnist(path: str) -> None:
     tflite_kwargs["optimizer"] = "cluster_cqat"
     result.extend(run_modules(mnist.CQATModel, keras_kwargs, tflite_kwargs, tflite_methods_1))
 
+    # Pruning - QAT
+    keras_kwargs["base_model_name"] = "mnist_prune_keras.h5"
+    keras_kwargs["method"] = "qat"
+    tflite_kwargs["optimizer"] = "prune_qat"
+    result.extend(run_modules(mnist.PQATModel, keras_kwargs, tflite_kwargs, tflite_methods_1))
+
+    # Pruning - PQAT
+    keras_kwargs["base_model_name"] = "mnist_prune_keras.h5"
+    keras_kwargs["method"] = "pqat"
+    tflite_kwargs["optimizer"] = "prune_pqat"
+    result.extend(run_modules(mnist.PQATModel, keras_kwargs, tflite_kwargs, tflite_methods_1))
+
     # Print out
     print_results(result)
 
