@@ -88,15 +88,13 @@ class BasicModel(_BaseModel):
             self.model = tf.keras.models.load_model(self._model_path)
             return
 
-        kwargs = dict()
-        kwargs["batch_size"] = self._batch_size
-        kwargs["epochs"] = self._epochs
-
-        if self._validation_split > 0:
-            kwargs["validation_split"] = self._validation_split
+        train_kwargs = dict()
+        train_kwargs["batch_size"] = self._batch_size
+        train_kwargs["epochs"] = self._epochs
+        train_kwargs["validation_split"] = self._validation_split
 
         self._compile()
-        self.model.fit(self.x_train, self.y_train, **kwargs)
+        self.model.fit(self.x_train, self.y_train, **train_kwargs)
 
         tf.keras.models.save_model(self.model, self._model_path, include_optimizer=True)
 
@@ -155,16 +153,14 @@ class PruningModel(_BaseModel):
             self.model = tf.keras.models.load_model(self._model_path)
             return
 
-        kwargs = dict()
-        kwargs["batch_size"] = self._batch_size
-        kwargs["epochs"] = self._epochs
-        kwargs["callbacks"] = [tfmot.sparsity.keras.UpdatePruningStep()]
-
-        if self._validation_split > 0:
-            kwargs["validation_split"] = self._validation_split
+        train_kwargs = dict()
+        train_kwargs["batch_size"] = self._batch_size
+        train_kwargs["epochs"] = self._epochs
+        train_kwargs["callbacks"] = [tfmot.sparsity.keras.UpdatePruningStep()]
+        train_kwargs["validation_split"] = self._validation_split
 
         self._compile()
-        self.model.fit(self.x_train, self.y_train, **kwargs)
+        self.model.fit(self.x_train, self.y_train, **train_kwargs)
 
         model_for_export = tfmot.sparsity.keras.strip_pruning(self.model)
         tf.keras.models.save_model(model_for_export, self._model_path, include_optimizer=True)
@@ -217,15 +213,13 @@ class QuantizationModel(_BaseModel):
                 self.model = tf.keras.models.load_model(self._model_path)
             return
 
-        kwargs = dict()
-        kwargs["batch_size"] = self._batch_size
-        kwargs["epochs"] = self._epochs
-
-        if self._validation_split > 0:
-            kwargs["validation_split"] = self._validation_split
+        train_kwargs = dict()
+        train_kwargs["batch_size"] = self._batch_size
+        train_kwargs["epochs"] = self._epochs
+        train_kwargs["validation_split"] = self._validation_split
 
         self._compile()
-        self.model.fit(self.x_train, self.y_train, **kwargs)
+        self.model.fit(self.x_train, self.y_train, **train_kwargs)
 
         tf.keras.models.save_model(self.model, self._model_path, include_optimizer=True)
 
@@ -281,15 +275,13 @@ class ClusteringModel(_BaseModel):
             self.model = tf.keras.models.load_model(self._model_path)
             return
 
-        kwargs = dict()
-        kwargs["batch_size"] = self._batch_size
-        kwargs["epochs"] = self._epochs
-
-        if self._validation_split > 0:
-            kwargs["validation_split"] = self._validation_split
+        train_kwargs = dict()
+        train_kwargs["batch_size"] = self._batch_size
+        train_kwargs["epochs"] = self._epochs
+        train_kwargs["validation_split"] = self._validation_split
 
         self._compile()
-        self.model.fit(self.x_train, self.y_train, **kwargs)
+        self.model.fit(self.x_train, self.y_train, **train_kwargs)
 
         model_for_export = tfmot.clustering.keras.strip_clustering(self.model)
         tf.keras.models.save_model(model_for_export, self._model_path, include_optimizer=True)
@@ -364,15 +356,13 @@ class CQATModel(_BaseModel):
                 self.model = tf.keras.models.load_model(self._model_path)
             return
 
-        kwargs = dict()
-        kwargs["batch_size"] = self._batch_size
-        kwargs["epochs"] = self._epochs
-
-        if self._validation_split > 0:
-            kwargs["validation_split"] = self._validation_split
+        train_kwargs = dict()
+        train_kwargs["batch_size"] = self._batch_size
+        train_kwargs["epochs"] = self._epochs
+        train_kwargs["validation_split"] = self._validation_split
 
         self._compile()
-        self.model.fit(self.x_train, self.y_train, **kwargs)
+        self.model.fit(self.x_train, self.y_train, **train_kwargs)
 
         tf.keras.models.save_model(self.model, self._model_path, include_optimizer=True)
 
