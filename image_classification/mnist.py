@@ -61,6 +61,8 @@ class BasicModel(_BaseModel):
         self._batch_size = 128
         self._epochs = 5
 
+        print("Run without optimizing")
+
     def create_model(self, summary: bool = False) -> None:
         input_layer = tf.keras.Input(shape=(28, 28))
         x = tf.keras.layers.Reshape(target_shape=(28, 28, 1))(input_layer)
@@ -74,39 +76,41 @@ class BasicModel(_BaseModel):
         if summary:
             self.model.summary()
 
+    def _compile(self) -> None:
+        self.model.compile(
+            optimizer="adam",
+            loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+            metrics=["accuracy"],
+        )
+
     def train(self) -> None:
-        kwargs = {
-            "batch_size": self._batch_size,
-            "epochs": self._epochs,
-        }
+        if os.path.exists(self._model_path):
+            self.model = tf.keras.models.load_model(self._model_path)
+            return
+
+        kwargs = dict()
+        kwargs["batch_size"] = self._batch_size
+        kwargs["epochs"] = self._epochs
 
         if self._validation_split > 0:
             kwargs["validation_split"] = self._validation_split
 
-        if os.path.exists(self._model_path):
-            self.model = tf.keras.models.load_model(self._model_path)
-        else:
-            self.model.compile(
-                optimizer="adam",
-                loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
-                metrics=["accuracy"],
-            )
+        self._compile()
+        self.model.fit(self.x_train, self.y_train, **kwargs)
 
-            self.model.fit(self.x_train, self.y_train, **kwargs)
-            tf.keras.models.save_model(self.model, self._model_path, include_optimizer=True)
+        tf.keras.models.save_model(self.model, self._model_path, include_optimizer=True)
 
     def evaluate(self) -> Dict[str, Any]:
         start_time = perf_counter()
         _, accuracy = self.model.evaluate(self.x_test, self.y_test, verbose=0)
         end_time = perf_counter()
 
-        result = {
-            "method": "keras",
-            "opt": "None",
-            "accuracy": accuracy,
-            "total_time": end_time - start_time,
-            "model_file_size": os.path.getsize(self._model_path),
-        }
+        result = dict()
+        result["method"] = "keras"
+        result["opt"] = "None"
+        result["accuracy"] = accuracy
+        result["total_time"] = end_time - start_time
+        result["model_file_size"] = os.path.getsize(self._model_path)
 
         return result
 
@@ -121,23 +125,25 @@ class PruningModel(_BaseModel):
         self._batch_size = 128
         self._epochs = 5
 
+        print("Run weight pruning")
+
     def create_model(self, summary: bool = False) -> None:
-        num_data = self.x_train.shape[0] * (1 - self._validation_split)
-        pruning_params = {
-            "pruning_schedule": tfmot.sparsity.keras.PolynomialDecay(
-                initial_sparsity=0.5,
-                final_sparsity=0.8,
-                begin_step=0,
-                end_step=np.ceil(num_data / self._batch_size).astype(np.int32) * self._epochs,
-            )
-        }
+        pruning_params = dict()
+
+        _num_data = self.x_train.shape[0] * (1 - self._validation_split)
+        pruning_params["pruning_schedule"] = tfmot.sparsity.keras.PolynomialDecay(
+            initial_sparsity=0.5,
+            final_sparsity=0.8,
+            begin_step=0,
+            end_step=np.ceil(_num_data / self._batch_size).astype(np.int32) * self._epochs,
+        )
 
         self.model = tfmot.sparsity.keras.prune_low_magnitude(self._base_model, **pruning_params)
 
         if summary:
             self.model.summary()
 
-    def _compile(self):
+    def _compile(self) -> None:
         self.model.compile(
             optimizer="adam",
             loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
@@ -145,24 +151,23 @@ class PruningModel(_BaseModel):
         )
 
     def train(self) -> None:
-        kwargs = {
-            "batch_size": self._batch_size,
-            "epochs": self._epochs,
-            "callbacks": [tfmot.sparsity.keras.UpdatePruningStep()],
-        }
+        if os.path.exists(self._model_path):
+            self.model = tf.keras.models.load_model(self._model_path)
+            return
+
+        kwargs = dict()
+        kwargs["batch_size"] = self._batch_size
+        kwargs["epochs"] = self._epochs
+        kwargs["callbacks"] = [tfmot.sparsity.keras.UpdatePruningStep()]
 
         if self._validation_split > 0:
             kwargs["validation_split"] = self._validation_split
 
         self._compile()
+        self.model.fit(self.x_train, self.y_train, **kwargs)
 
-        if os.path.exists(self._model_path):
-            self.model = tf.keras.models.load_model(self._model_path)
-        else:
-            self.model.fit(self.x_train, self.y_train, **kwargs)
-
-            model_for_export = tfmot.sparsity.keras.strip_pruning(self.model)
-            tf.keras.models.save_model(model_for_export, self._model_path, include_optimizer=True)
+        model_for_export = tfmot.sparsity.keras.strip_pruning(self.model)
+        tf.keras.models.save_model(model_for_export, self._model_path, include_optimizer=True)
 
     def evaluate(self) -> Dict[str, Any]:
         self._compile()
@@ -171,13 +176,12 @@ class PruningModel(_BaseModel):
         _, accuracy = self.model.evaluate(self.x_test, self.y_test, verbose=0)
         end_time = perf_counter()
 
-        result = {
-            "method": "keras",
-            "opt": "prune",
-            "accuracy": accuracy,
-            "total_time": end_time - start_time,
-            "model_file_size": os.path.getsize(self._model_path),
-        }
+        result = dict()
+        result["method"] = "keras"
+        result["opt"] = "prune"
+        result["accuracy"] = accuracy
+        result["total_time"] = end_time - start_time
+        result["model_file_size"] = os.path.getsize(self._model_path)
 
         return result
 
@@ -192,47 +196,50 @@ class QuantizationModel(_BaseModel):
         self._batch_size = 128
         self._epochs = 5
 
+        print("Run quantization")
+
     def create_model(self, summary: bool = False) -> None:
         self.model = tfmot.quantization.keras.quantize_model(self._base_model)
 
         if summary:
             self.model.summary()
 
-    def train(self) -> None:
-        kwargs = {
-            "batch_size": self._batch_size,
-            "epochs": self._epochs,
-        }
-
-        if self._validation_split > 0:
-            kwargs["validation_split"] = self._validation_split
-
+    def _compile(self) -> None:
         self.model.compile(
             optimizer="adam",
             loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
             metrics=["accuracy"],
         )
 
+    def train(self) -> None:
         if os.path.exists(self._model_path):
             with tfmot.quantization.keras.quantize_scope():
                 self.model = tf.keras.models.load_model(self._model_path)
-        else:
-            self.model.fit(self.x_train, self.y_train, **kwargs)
+            return
 
-            tf.keras.models.save_model(self.model, self._model_path, include_optimizer=True)
+        kwargs = dict()
+        kwargs["batch_size"] = self._batch_size
+        kwargs["epochs"] = self._epochs
+
+        if self._validation_split > 0:
+            kwargs["validation_split"] = self._validation_split
+
+        self._compile()
+        self.model.fit(self.x_train, self.y_train, **kwargs)
+
+        tf.keras.models.save_model(self.model, self._model_path, include_optimizer=True)
 
     def evaluate(self) -> Dict[str, Any]:
         start_time = perf_counter()
         _, accuracy = self.model.evaluate(self.x_test, self.y_test, verbose=0)
         end_time = perf_counter()
 
-        result = {
-            "method": "keras",
-            "opt": "quantize",
-            "accuracy": accuracy,
-            "total_time": end_time - start_time,
-            "model_file_size": os.path.getsize(self._model_path),
-        }
+        result = dict()
+        result["method"] = "keras"
+        result["opt"] = "quantize"
+        result["accuracy"] = accuracy
+        result["total_time"] = end_time - start_time
+        result["model_file_size"] = os.path.getsize(self._model_path)
 
         return result
 
@@ -247,17 +254,15 @@ class ClusteringModel(_BaseModel):
         self._batch_size = 128
         self._epochs = 5
 
-    def create_model(self, summary: bool = False) -> None:
-        # clustered_params = {
-        #     "number_of_clusters": 16,
-        #     "cluster_centroids_init": tfmot.clustering.keras.CentroidInitialization.LINEAR,
-        # }
+        print("Run weight clustering")
 
-        clustered_params = {
-            "number_of_clusters": 8,
-            "cluster_centroids_init": tfmot.clustering.keras.CentroidInitialization.KMEANS_PLUS_PLUS,
-            "cluster_per_channel": True,
-        }
+    def create_model(self, summary: bool = False) -> None:
+        clustered_params = dict()
+        # clustered_params["number_of_clusters"] = 16
+        # clustered_params["cluster_centroids_init"] = tfmot.clustering.keras.CentroidInitialization.LINEAR
+        clustered_params["number_of_clusters"] = 8
+        clustered_params["cluster_centroids_init"] = tfmot.clustering.keras.CentroidInitialization.KMEANS_PLUS_PLUS
+        clustered_params["cluster_per_channel"] = True
 
         self.model = tfmot.clustering.keras.cluster_weights(self._base_model, **clustered_params)
 
@@ -272,23 +277,22 @@ class ClusteringModel(_BaseModel):
         )
 
     def train(self) -> None:
-        kwargs = {
-            "batch_size": self._batch_size,
-            "epochs": self._epochs,
-        }
+        if os.path.exists(self._model_path):
+            self.model = tf.keras.models.load_model(self._model_path)
+            return
+
+        kwargs = dict()
+        kwargs["batch_size"] = self._batch_size
+        kwargs["epochs"] = self._epochs
 
         if self._validation_split > 0:
             kwargs["validation_split"] = self._validation_split
 
         self._compile()
+        self.model.fit(self.x_train, self.y_train, **kwargs)
 
-        if os.path.exists(self._model_path):
-            self.model = tf.keras.models.load_model(self._model_path)
-        else:
-            self.model.fit(self.x_train, self.y_train, **kwargs)
-
-            model_for_export = tfmot.clustering.keras.strip_clustering(self.model)
-            tf.keras.models.save_model(model_for_export, self._model_path, include_optimizer=True)
+        model_for_export = tfmot.clustering.keras.strip_clustering(self.model)
+        tf.keras.models.save_model(model_for_export, self._model_path, include_optimizer=True)
 
     def evaluate(self) -> Dict[str, Any]:
         self._compile()
@@ -297,13 +301,12 @@ class ClusteringModel(_BaseModel):
         _, accuracy = self.model.evaluate(self.x_test, self.y_test, verbose=0)
         end_time = perf_counter()
 
-        result = {
-            "method": "keras",
-            "opt": "cluster",
-            "accuracy": accuracy,
-            "total_time": end_time - start_time,
-            "model_file_size": os.path.getsize(self._model_path),
-        }
+        result = dict()
+        result["method"] = "keras"
+        result["opt"] = "cluster"
+        result["accuracy"] = accuracy
+        result["total_time"] = end_time - start_time
+        result["model_file_size"] = os.path.getsize(self._model_path)
 
         return result
 
@@ -325,15 +328,22 @@ class CQATModel(_BaseModel):
         self._batch_size = 128
         self._epochs = 5
 
+        print(f"Run {method.upper()}")
+
+    def _get_qat_model(self) -> Any:
+        return tfmot.quantization.keras.quantize_model(self._base_model)
+
+    def _get_cqat_model(self) -> Any:
+        return tfmot.quantization.keras.quantize_apply(
+            tfmot.quantization.keras.quantize_annotate_model(self._base_model),
+            tfmot.experimental.combine.Default8BitClusterPreserveQuantizeScheme(),
+        )
+
     def create_model(self, summary: bool = False) -> None:
         if self._method == "qat":
-            self.model = tfmot.quantization.keras.quantize_model(self._base_model)
+            self.model = self._get_qat_model()
         elif self._method == "cqat":
-            quant_aware_annotate_model = tfmot.quantization.keras.quantize_annotate_model(self._base_model)
-            self.model = tfmot.quantization.keras.quantize_apply(
-                quant_aware_annotate_model,
-                tfmot.experimental.combine.Default8BitClusterPreserveQuantizeScheme(),
-            )
+            self.model = self._get_cqat_model()
 
         if summary:
             self.model.summary()
@@ -346,35 +356,34 @@ class CQATModel(_BaseModel):
         )
 
     def train(self) -> None:
-        kwargs = {
-            "batch_size": self._batch_size,
-            "epochs": self._epochs,
-        }
+        # TODO: CQAT can save, but load model has issues
+        if os.path.exists(self._model_path) and self._method != "cqat":
+            with tfmot.quantization.keras.quantize_scope():
+                self.model = tf.keras.models.load_model(self._model_path)
+            return
+
+        kwargs = dict()
+        kwargs["batch_size"] = self._batch_size
+        kwargs["epochs"] = self._epochs
 
         if self._validation_split > 0:
             kwargs["validation_split"] = self._validation_split
 
         self._compile()
+        self.model.fit(self.x_train, self.y_train, **kwargs)
 
-        if os.path.exists(self._model_path) and self._method != "cqat":
-            with tfmot.quantization.keras.quantize_scope():
-                self.model = tf.keras.models.load_model(self._model_path)
-        else:
-            self.model.fit(self.x_train, self.y_train, **kwargs)
-
-            tf.keras.models.save_model(self.model, self._model_path, include_optimizer=True)
+        tf.keras.models.save_model(self.model, self._model_path, include_optimizer=True)
 
     def evaluate(self) -> Dict[str, Any]:
         start_time = perf_counter()
         _, accuracy = self.model.evaluate(self.x_test, self.y_test, verbose=0)
         end_time = perf_counter()
 
-        result = {
-            "method": "keras",
-            "opt": f"cluster_{self._method}",
-            "accuracy": accuracy,
-            "total_time": end_time - start_time,
-            "model_file_size": os.path.getsize(self._model_path),
-        }
+        result = dict()
+        result["method"] = "keras"
+        result["opt"] = f"cluster_{self._method}"
+        result["accuracy"] = accuracy
+        result["total_time"] = end_time - start_time
+        result["model_file_size"] = os.path.getsize(self._model_path)
 
         return result
