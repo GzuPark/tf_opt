@@ -39,6 +39,12 @@ class Benchmark(object):
         self.tflite_kwargs["dataset_name"] = "mnist"
         self.tflite_kwargs["dataset"] = dataset
 
+        self.tflite_methods_group = dict()
+        self.tflite_methods_group["default"] = ["fp32", "fp16", "dynamic", "uint8"]
+        self.tflite_methods_group["all"] = ["fp32", "fp16", "dynamic", "uint8", "int16x8"]
+
+        self.tflite_methods = None
+
     @staticmethod
     def load_dataset(root_dir: str) -> Dict[str, np.ndarray]:
         data_dir = os.path.join(root_dir, "data", "mnist")
@@ -79,60 +85,70 @@ class Benchmark(object):
 
     def _get_optimize_none(self) -> Any:
         self.tflite_kwargs["optimizer"] = "none"
+        self.tflite_methods = self.tflite_methods_group.get("all")
         return BasicModel
 
     def _get_optimize_prune(self) -> Any:
         self.keras_kwargs["base_model_name"] = "mnist_none_keras.h5"
         self.tflite_kwargs["optimizer"] = "prune"
+        self.tflite_methods = self.tflite_methods_group.get("all")
         return PruningModel
 
     def _get_optimize_quant(self) -> Any:
         self.keras_kwargs["base_model_name"] = "mnist_none_keras.h5"
         self.tflite_kwargs["optimizer"] = "quantize"
+        self.tflite_methods = self.tflite_methods_group.get("default")
         return QuantizationModel
 
     def _get_optimize_cluster(self) -> Any:
         self.keras_kwargs["base_model_name"] = "mnist_none_keras.h5"
         self.tflite_kwargs["optimizer"] = "cluster"
+        self.tflite_methods = self.tflite_methods_group.get("all")
         return ClusteringModel
 
     def _get_optimize_cluster_qat(self) -> Any:
         self.keras_kwargs["base_model_name"] = "mnist_cluster_keras.h5"
         self.tflite_kwargs["optimizer"] = "qat"
         self.tflite_kwargs["optimizer"] = "cluster_qat"
+        self.tflite_methods = self.tflite_methods_group.get("default")
         return CQATModel
 
     def _get_optimize_cluster_cqat(self) -> Any:
         self.keras_kwargs["base_model_name"] = "mnist_cluster_keras.h5"
         self.tflite_kwargs["optimizer"] = "cqat"
         self.tflite_kwargs["optimizer"] = "cluster_cqat"
+        self.tflite_methods = self.tflite_methods_group.get("default")
         return CQATModel
 
     def _get_optimize_prune_qat(self) -> Any:
         self.keras_kwargs["base_model_name"] = "mnist_prune_keras.h5"
         self.tflite_kwargs["optimizer"] = "qat"
         self.tflite_kwargs["optimizer"] = "prune_qat"
+        self.tflite_methods = self.tflite_methods_group.get("default")
         return PQATModel
 
     def _get_optimize_prune_pqat(self) -> Any:
         self.keras_kwargs["base_model_name"] = "mnist_prune_keras.h5"
         self.tflite_kwargs["optimizer"] = "pqat"
         self.tflite_kwargs["optimizer"] = "prune_pqat"
+        self.tflite_methods = self.tflite_methods_group.get("default")
         return PQATModel
 
     def _get_optimize_prune_cluster_qat(self) -> Any:
         self.keras_kwargs["base_model_name"] = "mnist_prune_keras.h5"
         self.tflite_kwargs["optimizer"] = "qat"
         self.tflite_kwargs["optimizer"] = "prune_cluster_qat"
+        self.tflite_methods = self.tflite_methods_group.get("default")
         return PCQATModel
 
     def _get_optimize_prune_cluster_pcqat(self) -> Any:
         self.keras_kwargs["base_model_name"] = "mnist_prune_keras.h5"
         self.tflite_kwargs["optimizer"] = "pcqat"
         self.tflite_kwargs["optimizer"] = "prune_cluster_pcqat"
+        self.tflite_methods = self.tflite_methods_group.get("default")
         return PCQATModel
 
-    def run_modules(self, module: Any, tflite_methods: List[str]) -> List[Dict[str, Any]]:
+    def run_modules(self, module: Any) -> List[Dict[str, Any]]:
         tf.keras.backend.clear_session()
         gc.collect()
         sleep(2)
@@ -144,7 +160,7 @@ class Benchmark(object):
         model.train()
         result.append(model.evaluate())
 
-        for method in tflite_methods:
+        for method in self.tflite_methods:
             converter = ImageClassificationConverter(method=method, **self.tflite_kwargs)
             converter.convert(model=model.model)
             result.append(converter.evaluate())
