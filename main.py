@@ -1,116 +1,39 @@
-import gc
 import os.path
 
-from time import sleep
 from typing import Any, Dict, List
 
-import tensorflow as tf
-
-from image_classification import mnist, ImageClassificationConverter
+from image_classification import mnist
 from utils import set_seed
 
 
-def run_modules(
-        module: Any,
-        keras_kwargs: Dict[str, Any],
-        tflite_kwargs: Dict[str, Any],
-        tflite_methods: List[str],
-) -> List[Dict[str, Any]]:
-    tf.keras.backend.clear_session()
-    gc.collect()
-    sleep(2)
+def run_mnist(path: str, tflite_methods: Dict[str, Dict[str, Any]]) -> None:
+    optimizes = [
+        "none",
+        "prune",
+        "quantize",
+        "cluster",
+        "cluster_qat",
+        "cluster_cqat",
+        "prune_qat",
+        "prune_pqat",
+        "prune_cluster_qat",
+        "prune_cluster_pcqat",
+    ]
 
+    benchmark = mnist.Benchmark(path)
     result = list()
 
-    model = module(**keras_kwargs)
-    model.create_model()
-    model.train()
-    result.append(model.evaluate())
+    for optimize in optimizes:
+        module = benchmark.get_optimize_module(optimize)
+        method = None
 
-    for method in tflite_methods:
-        converter = ImageClassificationConverter(method=method, **tflite_kwargs)
-        converter.convert(model=model.model)
-        result.append(converter.evaluate())
+        if optimize in tflite_methods["default"]["possible_opts"]:
+            method = tflite_methods["default"]["methods"]
+        elif optimize in tflite_methods["all"]["possible_opts"]:
+            method = tflite_methods["all"]["methods"]
 
-    return result
-
-
-def run_mnist(path: str) -> None:
-    result = list()
-
-    # RuntimeError: Quantization to 16x8-bit not yet supported for op: 'DEQUANTIZE'
-    tflite_methods_1 = ["fp32", "fp16", "dynamic", "uint8"]
-    tflite_methods_2 = tflite_methods_1 + ["int16x8"]
-
-    dataset = mnist.load_dataset(path)
-
-    keras_kwargs = dict()
-    keras_kwargs["root_dir"] = path
-    keras_kwargs["dataset"] = dataset
-    keras_kwargs["batch_size"] = 128
-    keras_kwargs["epochs"] = 5
-    keras_kwargs["valid_split"] = 0.1
-    keras_kwargs["verbose"] = False
-
-    tflite_kwargs = dict()
-    tflite_kwargs["root_dir"] = path
-    tflite_kwargs["dataset_name"] = "mnist"
-    tflite_kwargs["dataset"] = dataset
-
-    # No optimized
-    tflite_kwargs["optimizer"] = "none"
-    result.extend(run_modules(mnist.BasicModel, keras_kwargs, tflite_kwargs, tflite_methods_2))
-
-    # Pruning
-    keras_kwargs["base_model_name"] = "mnist_none_keras.h5"
-    tflite_kwargs["optimizer"] = "prune"
-    result.extend(run_modules(mnist.PruningModel, keras_kwargs, tflite_kwargs, tflite_methods_2))
-
-    # Quantization
-    keras_kwargs["base_model_name"] = "mnist_none_keras.h5"
-    tflite_kwargs["optimizer"] = "quantize"
-    result.extend(run_modules(mnist.QuantizationModel, keras_kwargs, tflite_kwargs, tflite_methods_1))
-
-    # Clustering
-    keras_kwargs["base_model_name"] = "mnist_none_keras.h5"
-    tflite_kwargs["optimizer"] = "cluster"
-    result.extend(run_modules(mnist.ClusteringModel, keras_kwargs, tflite_kwargs, tflite_methods_2))
-
-    # Clustering - QAT
-    keras_kwargs["base_model_name"] = "mnist_cluster_keras.h5"
-    keras_kwargs["method"] = "qat"
-    tflite_kwargs["optimizer"] = "cluster_qat"
-    result.extend(run_modules(mnist.CQATModel, keras_kwargs, tflite_kwargs, tflite_methods_1))
-
-    # Clustering - CQAT
-    keras_kwargs["base_model_name"] = "mnist_cluster_keras.h5"
-    keras_kwargs["method"] = "cqat"
-    tflite_kwargs["optimizer"] = "cluster_cqat"
-    result.extend(run_modules(mnist.CQATModel, keras_kwargs, tflite_kwargs, tflite_methods_1))
-
-    # Pruning - QAT
-    keras_kwargs["base_model_name"] = "mnist_prune_keras.h5"
-    keras_kwargs["method"] = "qat"
-    tflite_kwargs["optimizer"] = "prune_qat"
-    result.extend(run_modules(mnist.PQATModel, keras_kwargs, tflite_kwargs, tflite_methods_1))
-
-    # Pruning - PQAT
-    keras_kwargs["base_model_name"] = "mnist_prune_keras.h5"
-    keras_kwargs["method"] = "pqat"
-    tflite_kwargs["optimizer"] = "prune_pqat"
-    result.extend(run_modules(mnist.PQATModel, keras_kwargs, tflite_kwargs, tflite_methods_1))
-
-    # Pruning & Clustering - QAT
-    keras_kwargs["base_model_name"] = "mnist_prune_keras.h5"
-    keras_kwargs["method"] = "qat"
-    tflite_kwargs["optimizer"] = "prune_cluster_qat"
-    result.extend(run_modules(mnist.PCQATModel, keras_kwargs, tflite_kwargs, tflite_methods_1))
-
-    # Pruning & Clustering - PCQAT
-    keras_kwargs["base_model_name"] = "mnist_prune_keras.h5"
-    keras_kwargs["method"] = "pcqat"
-    tflite_kwargs["optimizer"] = "prune_cluster_pcqat"
-    result.extend(run_modules(mnist.PCQATModel, keras_kwargs, tflite_kwargs, tflite_methods_1))
+        res = benchmark.run_modules(module, method)
+        result.extend(res)
 
     # Print out
     print_results(result)
@@ -133,7 +56,32 @@ def main() -> None:
     set_seed()
 
     root_path = os.path.dirname(__file__)
-    run_mnist(root_path)
+
+    tflite_methods = dict()
+    tflite_methods["all"] = {
+        "possible_opts": {
+            "none",
+            "prune",
+            "cluster",
+        },
+        "methods": ["fp32", "fp16", "dynamic", "uint8", "int16x8"],
+    }
+    tflite_methods["default"] = {
+        "possible_opts": {
+            "quantize",
+            "cluster",
+            "cluster_qat",
+            "cluster_cqat",
+            "prune_qat",
+            "prune_pqat",
+            "prune_cluster_qat",
+            "prune_cluster_pcqat",
+        },
+        # RuntimeError: Quantization to 16x8-bit not yet supported for op: 'DEQUANTIZE'
+        "methods": ["fp32", "fp16", "dynamic", "uint8"],
+    }
+
+    run_mnist(root_path, tflite_methods)
 
 
 if __name__ == '__main__':
