@@ -22,8 +22,6 @@ class Benchmark(object):
             valid_split: float = 0.1,
             verbose: bool = False,
     ) -> None:
-        self.result = list()
-
         dataset = self.load_dataset(path)
 
         self.keras_kwargs = dict()
