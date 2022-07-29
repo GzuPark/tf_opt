@@ -8,12 +8,13 @@ def run_mnist(path: str) -> None:
     optimizes = [
         "none",
         "prune",
-        "quantize",
+        "quant",
         "cluster",
         "cluster_qat",
         "cluster_cqat",
         "prune_qat",
         "prune_pqat",
+        "prune_cluster",
         "prune_cluster_qat",
         "prune_cluster_pcqat",
     ]
