@@ -1,4 +1,5 @@
 import gc
+import logging
 import os
 
 from time import perf_counter, sleep
@@ -9,7 +10,7 @@ import tensorflow as tf
 import tensorflow_model_optimization as tfmot
 import tensorflow_model_optimization.python.core.clustering.keras.experimental.cluster as pc_cluster
 
-from .tflite_converter import ImageClassificationConverter
+from image_classification.tflite_converter import ImageClassificationConverter
 
 
 class Benchmark(object):
@@ -165,20 +166,20 @@ class Benchmark(object):
         self.tflite_methods = self.tflite_methods_group.get("default")
         return PCQATModel
 
-    def run_modules(self, module: Any) -> List[Dict[str, Any]]:
+    def run_modules(self, module: Any, logger: logging.Logger) -> List[Dict[str, Any]]:
         tf.keras.backend.clear_session()
         gc.collect()
         sleep(2)
 
         result = list()
 
-        model = module()(**self.keras_kwargs)
+        model = module()(logger=logger, **self.keras_kwargs)
         model.create_model()
         model.train()
         result.append(model.evaluate())
 
         for method in self.tflite_methods:
-            converter = ImageClassificationConverter(method=method, **self.tflite_kwargs)
+            converter = ImageClassificationConverter(method=method, logger=logger, **self.tflite_kwargs)
             converter.convert(model=model.model)
             result.append(converter.evaluate())
 
@@ -191,9 +192,9 @@ class _BaseModel(object):
             self,
             root_dir: str,
             dataset: Dict[str, Any],
+            valid_split: float = 0.0,
             batch_size: int = 128,
             epochs: int = 5,
-            valid_split: float = 0.0,
     ) -> None:
         self.valid_split = valid_split
         self.batch_size = batch_size
@@ -227,18 +228,20 @@ class BasicModel(_BaseModel):
             self,
             root_dir: str,
             dataset: Dict[str, Any],
+            valid_split: float,
             batch_size: int,
             epochs: int,
-            valid_split: float,
+            logger: logging.Logger,
             verbose: bool = False,
     ) -> None:
-        super().__init__(root_dir, dataset, batch_size, epochs, valid_split)
+        super().__init__(root_dir, dataset, valid_split, batch_size, epochs)
 
         self.model = None
         self.model_path = os.path.join(self.ckpt_dir, "mnist_none_keras.h5")
         self.verbose = 1 if verbose else 0
 
-        print("Run without optimizing")
+        self._logger = logger
+        self._logger.info("Run without optimizing")
 
     def create_model(self) -> None:
         input_layer = tf.keras.Input(shape=(28, 28))
@@ -288,6 +291,8 @@ class BasicModel(_BaseModel):
         result["total_time"] = end_time - start_time
         result["model_file_size"] = os.path.getsize(self.model_path)
 
+        self._logger.info(result)
+
         return result
 
 
@@ -301,9 +306,10 @@ class PruningModel(_BaseModel):
             valid_split: float,
             batch_size: int,
             epochs: int,
+            logger: logging.Logger,
             verbose: bool = False,
     ) -> None:
-        super().__init__(root_dir, dataset, batch_size, epochs, valid_split)
+        super().__init__(root_dir, dataset, valid_split, batch_size, epochs)
 
         self.model = None
         self.model_path = os.path.join(self.ckpt_dir, "mnist_prune_keras.h5")
@@ -316,7 +322,8 @@ class PruningModel(_BaseModel):
         else:
             raise ValueError(f"Do not exist {base_model_path} file.\nTry train the BasicModel.")
 
-        print("Run weight pruning")
+        self._logger = logger
+        self._logger.info("Run weight pruning")
 
     def create_model(self) -> None:
         pruning_params = dict()
@@ -373,6 +380,8 @@ class PruningModel(_BaseModel):
         result["total_time"] = end_time - start_time
         result["model_file_size"] = os.path.getsize(self.model_path)
 
+        self._logger.info(result)
+
         return result
 
 
@@ -386,9 +395,10 @@ class QuantizationModel(_BaseModel):
             valid_split: float,
             batch_size: int,
             epochs: int,
+            logger: logging.Logger,
             verbose: bool = False,
     ) -> None:
-        super().__init__(root_dir, dataset, batch_size, epochs, valid_split)
+        super().__init__(root_dir, dataset, valid_split, batch_size, epochs)
 
         self.model = None
         self.model_path = os.path.join(self.ckpt_dir, "mnist_quant_keras.h5")
@@ -401,7 +411,8 @@ class QuantizationModel(_BaseModel):
         else:
             raise ValueError(f"Do not exist {base_model_path} file.\nTry train the BasicModel.")
 
-        print("Run quantization")
+        self._logger = logger
+        self._logger.info("Run quantization")
 
     def create_model(self) -> None:
         self.model = tfmot.quantization.keras.quantize_model(self._base_model)
@@ -445,6 +456,8 @@ class QuantizationModel(_BaseModel):
         result["total_time"] = end_time - start_time
         result["model_file_size"] = os.path.getsize(self.model_path)
 
+        self._logger.info(result)
+
         return result
 
 
@@ -458,9 +471,10 @@ class ClusteringModel(_BaseModel):
             valid_split: float,
             batch_size: int,
             epochs: int,
+            logger: logging.Logger,
             verbose: bool = False,
     ) -> None:
-        super().__init__(root_dir, dataset, batch_size, epochs, valid_split)
+        super().__init__(root_dir, dataset, valid_split, batch_size, epochs)
 
         self.model = None
         self.model_path = os.path.join(self.ckpt_dir, "mnist_cluster_keras.h5")
@@ -473,7 +487,8 @@ class ClusteringModel(_BaseModel):
         else:
             raise ValueError(f"Do not exist {base_model_path} file.\nTry train the BasicModel.")
 
-        print("Run weight clustering")
+        self._logger = logger
+        self._logger.info("Run weight clustering")
 
     def create_model(self) -> None:
         clustered_params = dict()
@@ -526,6 +541,8 @@ class ClusteringModel(_BaseModel):
         result["total_time"] = end_time - start_time
         result["model_file_size"] = os.path.getsize(self.model_path)
 
+        self._logger.info(result)
+
         return result
 
 
@@ -540,10 +557,11 @@ class CQATModel(_BaseModel):
             valid_split: float,
             batch_size: int,
             epochs: int,
+            logger: logging.Logger,
             method: str = "CQAT",
             verbose: bool = False,
     ) -> None:
-        super().__init__(root_dir, dataset, batch_size, epochs, valid_split)
+        super().__init__(root_dir, dataset, valid_split, batch_size, epochs)
 
         self.model = None
         self.model_path = os.path.join(self.ckpt_dir, f"mnist_cluster_{method}_keras.h5")
@@ -557,7 +575,8 @@ class CQATModel(_BaseModel):
         else:
             raise ValueError(f"Do not exist {base_model_path} file.\nTry train the ClusteringModel.")
 
-        print(f"Run clustering {method.upper()}")
+        self._logger = logger
+        self._logger.info(f"Run clustering {method.upper()}")
 
     def _get_qat_model(self) -> Any:
         return tfmot.quantization.keras.quantize_model(self._base_model)
@@ -616,6 +635,8 @@ class CQATModel(_BaseModel):
         result["total_time"] = end_time - start_time
         result["model_file_size"] = os.path.getsize(self.model_path)
 
+        self._logger.info(result)
+
         return result
 
 
@@ -630,10 +651,11 @@ class PQATModel(_BaseModel):
             valid_split: float,
             batch_size: int,
             epochs: int,
+            logger: logging.Logger,
             method: str = "PQAT",
             verbose: bool = False,
     ) -> None:
-        super().__init__(root_dir, dataset, batch_size, epochs, valid_split)
+        super().__init__(root_dir, dataset, valid_split, batch_size, epochs)
 
         self.model = None
         self.model_path = os.path.join(self.ckpt_dir, f"mnist_prune_{method}_keras.h5")
@@ -647,7 +669,8 @@ class PQATModel(_BaseModel):
         else:
             raise ValueError(f"Do not exist {base_model_path} file.\nTry train the PruningModel.")
 
-        print(f"Run pruning {method.upper()}")
+        self._logger = logger
+        self._logger.info(f"Run pruning {method.upper()}")
 
     def _get_qat_model(self) -> Any:
         return tfmot.quantization.keras.quantize_model(self._base_model)
@@ -705,6 +728,8 @@ class PQATModel(_BaseModel):
         result["total_time"] = end_time - start_time
         result["model_file_size"] = os.path.getsize(self.model_path)
 
+        self._logger.info(result)
+
         return result
 
 
@@ -719,9 +744,10 @@ class PruneClusterModel(_BaseModel):
             valid_split: float,
             batch_size: int,
             epochs: int,
+            logger: logging.Logger,
             verbose: bool = False,
     ) -> None:
-        super().__init__(root_dir, dataset, batch_size, epochs, valid_split)
+        super().__init__(root_dir, dataset, valid_split, batch_size, epochs)
 
         self.model = None
         self.model_path = os.path.join(self.ckpt_dir, f"mnist_prune_cluster_keras.h5")
@@ -735,7 +761,8 @@ class PruneClusterModel(_BaseModel):
         else:
             raise ValueError(f"Do not exist {base_model_path} file.\nTry train the PruningModel.")
 
-        print("Run pruning-clustering")
+        self._logger = logger
+        self._logger.info("Run pruning-clustering")
 
     def create_model(self) -> None:
         clustering_params = dict()
@@ -786,6 +813,8 @@ class PruneClusterModel(_BaseModel):
         result["total_time"] = end_time - start_time
         result["model_file_size"] = os.path.getsize(self.model_path)
 
+        self._logger.info(result)
+
         return result
 
 
@@ -800,10 +829,11 @@ class PCQATModel(_BaseModel):
             valid_split: float,
             batch_size: int,
             epochs: int,
+            logger: logging.Logger,
             method: str = "PCQAT",
             verbose: bool = False,
     ) -> None:
-        super().__init__(root_dir, dataset, batch_size, epochs, valid_split)
+        super().__init__(root_dir, dataset, valid_split, batch_size, epochs)
 
         self.model = None
         self.model_path = os.path.join(self.ckpt_dir, f"mnist_prune_cluster_{method}_keras.h5")
@@ -818,7 +848,8 @@ class PCQATModel(_BaseModel):
         else:
             raise ValueError(f"Do not exist {base_model_path} file.\nTry train the PruneClusterModel.")
 
-        print(f"Run pruning-clustering {method.upper()}")
+        self._logger = logger
+        self._logger.info(f"Run pruning-clustering {method.upper()}")
 
     def _get_qat_model(self) -> Any:
         return tfmot.quantization.keras.quantize_model(self._base_model)
@@ -876,5 +907,7 @@ class PCQATModel(_BaseModel):
         result["accuracy"] = accuracy
         result["total_time"] = end_time - start_time
         result["model_file_size"] = os.path.getsize(self.model_path)
+
+        self._logger.info(result)
 
         return result

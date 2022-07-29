@@ -1,7 +1,7 @@
 import os.path
 
 from image_classification import mnist
-from utils import print_outputs, set_seed
+from utils import get_logger, print_table, set_seed
 
 
 def run_mnist(path: str) -> None:
@@ -19,14 +19,15 @@ def run_mnist(path: str) -> None:
         "prune_cluster_pcqat",
     ]
 
+    logger = get_logger(path, "mnist")
     benchmark = mnist.Benchmark(path)
     result = list()
 
     for optimize in optimizes:
         module = benchmark.get_optimize_module(optimize)
-        result.extend(benchmark.run_modules(module))
+        result.extend(benchmark.run_modules(module, logger))
 
-    print_outputs(result, "ms", "KB")
+    print_table(result, "ms", "KB")
 
 
 def main() -> None:

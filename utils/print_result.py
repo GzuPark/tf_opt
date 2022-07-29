@@ -1,7 +1,8 @@
+from time import sleep
 from typing import Any, Dict, List
 
 
-def print_outputs(
+def print_table(
         outputs: List[Dict[str, Any]],
         time_unit: str = "ms",
         file_unit: str = "KB",
@@ -28,6 +29,7 @@ def print_outputs(
     bar += f"{'-' * 16}:|"
     bar += f"{'-' * 16}:|"
 
+    sleep(2)
     print(title)
     print(bar)
 

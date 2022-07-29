@@ -1,3 +1,4 @@
+import logging
 import os
 
 from time import perf_counter
@@ -15,6 +16,7 @@ class ImageClassificationConverter(object):
             dataset_name: str,
             dataset: Dict[str, Any],
             optimizer: str,
+            logger: logging.Logger,
             method: str = "dynamic",
     ) -> None:
         self.data = dataset
@@ -25,6 +27,8 @@ class ImageClassificationConverter(object):
         self._optimizer = optimizer
         self._converter = None
         self._interpreter = None
+
+        self.logger = logger
 
     def _initialize(self) -> None:
         optimizers = dict()
@@ -114,5 +118,7 @@ class ImageClassificationConverter(object):
         result["total_time"] = end_time - start_time
         result["model_file_size"] = os.path.getsize(self._model_path)
         result["accuracy"] = (np.sum(self.data["y_test"] == predictions) / len(self.data["y_test"])).astype(float)
+
+        self.logger.info(result)
 
         return result
