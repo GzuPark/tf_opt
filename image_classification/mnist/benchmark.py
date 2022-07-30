@@ -229,7 +229,7 @@ class Benchmark(BenchmarkInterface):
     def run_modules(self, module: Any, logger: logging.Logger) -> List[Dict[str, Any]]:
         tf.keras.backend.clear_session()
         gc.collect()
-        sleep(2)
+        sleep(3)
 
         result = list()
 
@@ -244,7 +244,6 @@ class Benchmark(BenchmarkInterface):
             result.append(converter.evaluate())
 
             del converter
-            sleep(1)
 
         del model
         self.keras_kwargs = None
