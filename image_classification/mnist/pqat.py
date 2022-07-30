@@ -31,13 +31,8 @@ class PQATModel(BaseModel):
         self.model = None
         self.model_path = os.path.join(self.ckpt_dir, model_filename)
         self._method = method.lower() if method.lower() in {"qat", "pqat"} else "pqat"
+        self._base_model_path = os.path.join(self.ckpt_dir, base_model_filename)
         self._base_model = None
-
-        base_model_path = os.path.join(self.ckpt_dir, base_model_filename)
-        if os.path.exists(base_model_path):
-            self._base_model = tf.keras.models.load_model(base_model_path)
-        else:
-            raise ValueError(f"Do not exist {base_model_path} file.\nTry train the PruningModel.")
 
         self._logger = logger
         self._logger.info(f"Run pruning {method.upper()}")
@@ -51,7 +46,15 @@ class PQATModel(BaseModel):
             tfmot.experimental.combine.Default8BitPrunePreserveQuantizeScheme(),
         )
 
+    def _load_base_model(self) -> None:
+        if os.path.exists(self._base_model_path):
+            self._base_model = tf.keras.models.load_model(self._base_model_path)
+        else:
+            raise ValueError(f"Do not exist {self._base_model_path} file.\nTry train the PruningModel.")
+
     def create_model(self) -> None:
+        self._load_base_model()
+
         models = dict()
         models["qat"] = self._get_qat_model
         models["pqat"] = self._get_pqat_model
@@ -69,10 +72,18 @@ class PQATModel(BaseModel):
             metrics=["accuracy"],
         )
 
-    def train(self) -> None:
+    def _load_model(self) -> bool:
+        success = False
+
         if os.path.exists(self.model_path):
             with tfmot.quantization.keras.quantize_scope():
                 self.model = tf.keras.models.load_model(self.model_path)
+            success = True
+
+        return success
+
+    def train(self) -> None:
+        if self._load_model():
             return
 
         train_kwargs = dict()
@@ -87,6 +98,10 @@ class PQATModel(BaseModel):
         tf.keras.models.save_model(self.model, self.model_path, include_optimizer=True)
 
     def evaluate(self) -> Dict[str, Any]:
+        if (self.model is None) and (not self._load_model()):
+            self._logger.error(f"Cannot load {self.model_path}.")
+            raise ValueError(f"Cannot load {self.model_path}.")
+
         start_time = perf_counter()
         _, accuracy = self.model.evaluate(self.x_test, self.y_test, verbose=self.verbose)
         end_time = perf_counter()

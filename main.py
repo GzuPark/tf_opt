@@ -6,7 +6,7 @@ from image_classification import mnist
 
 
 def run_mnist(path: str) -> None:
-    optimizes = [
+    tf_model_optimize_methods = [
         "none",
         "prune",
         "quant",
@@ -20,13 +20,21 @@ def run_mnist(path: str) -> None:
         "prune_cluster_pcqat",
     ]
 
+    tflite_quantize_methods = [
+        "fp32",
+        "fp16",
+        "dynamic",
+        "uint8",
+        "int16x8",
+    ]
+
     logger = utils.get_logger(path, "mnist")
     benchmark = mnist.Benchmark(path)
     result = list()
 
-    for optimize in optimizes:
-        module = benchmark.get_optimize_module(optimize)
-        result.extend(benchmark.run_modules(module, logger))
+    for tf_model_optimize_method in tf_model_optimize_methods:
+        module = benchmark.get_optimize_module(tf_model_optimize_method)
+        result.extend(benchmark.run_modules(module, logger, only_infer=False))
 
     utils.print_table(result, "ms", "KB")
 
