@@ -20,14 +20,6 @@ def run_mnist(path: str) -> None:
         "prune_cluster_pcqat",
     ]
 
-    tflite_quantize_methods = [
-        "fp32",
-        "fp16",
-        "dynamic",
-        "uint8",
-        "int16x8",
-    ]
-
     logger = utils.get_logger(path, "mnist")
     benchmark = mnist.Benchmark(path)
     result = list()
