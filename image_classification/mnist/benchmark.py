@@ -178,7 +178,11 @@ class Benchmark(BenchmarkInterface):
         self.tflite_methods = self.tflite_methods_group.get("default")
         return mnist.PCQATModel
 
-    def run_modules(self, module: Any, logger: logging.Logger) -> List[Dict[str, Any]]:
+    def run_modules(
+            self, module: Any,
+            logger: logging.Logger,
+            only_infer: bool = False,
+    ) -> List[Dict[str, Any]]:
         tf.keras.backend.clear_session()
         gc.collect()
         sleep(3)
@@ -186,8 +190,9 @@ class Benchmark(BenchmarkInterface):
         result = list()
 
         model = module()(logger=logger, **self.keras_kwargs)
-        model.create_model()
-        model.train()
+        if not only_infer:
+            model.create_model()
+            model.train()
         result.append(model.evaluate())
 
         for method in self.tflite_methods:

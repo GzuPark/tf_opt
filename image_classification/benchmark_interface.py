@@ -72,5 +72,5 @@ class BenchmarkInterface(ABC):
         pass
 
     @abstractmethod
-    def run_modules(self, module: Any, logger: logging.Logger) -> Any:
+    def run_modules(self, module: Any, logger: logging.Logger, only_infer: bool = False) -> Any:
         pass

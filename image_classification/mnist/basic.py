@@ -50,9 +50,17 @@ class BasicModel(BaseModel):
             metrics=["accuracy"],
         )
 
-    def train(self) -> None:
+    def _load_model(self) -> bool:
+        success = False
+
         if os.path.exists(self.model_path):
             self.model = tf.keras.models.load_model(self.model_path)
+            success = True
+
+        return success
+
+    def train(self) -> None:
+        if self._load_model():
             return
 
         train_kwargs = dict()
@@ -67,6 +75,10 @@ class BasicModel(BaseModel):
         tf.keras.models.save_model(self.model, self.model_path, include_optimizer=True)
 
     def evaluate(self) -> Dict[str, Any]:
+        if (self.model is None) and (not self._load_model()):
+            self._logger.error(f"Cannot load {self.model_path}.")
+            raise ValueError(f"Cannot load {self.model_path}.")
+
         start_time = perf_counter()
         _, accuracy = self.model.evaluate(self.x_test, self.y_test, verbose=self.verbose)
         end_time = perf_counter()
