@@ -70,11 +70,12 @@ class CQATModel(BaseModel):
         )
 
     def train(self) -> None:
-        # TODO: CQAT can save, but load model has issues
-        if os.path.exists(self.model_path) and self._method != "cqat":
-            with tfmot.quantization.keras.quantize_scope():
-                self.model = tf.keras.models.load_model(self.model_path)
-            return
+        try:
+            if os.path.exists(self.model_path):
+                with tfmot.quantization.keras.quantize_scope():
+                    self.model = tf.keras.models.load_model(self.model_path)
+        except ValueError as e:
+            self._logger.error(f"CQAT model cannot load {self.model_path}. {e}")
 
         train_kwargs = dict()
         train_kwargs["batch_size"] = self.batch_size

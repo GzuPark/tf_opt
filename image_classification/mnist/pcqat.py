@@ -71,11 +71,12 @@ class PCQATModel(BaseModel):
         )
 
     def train(self) -> None:
-        # TODO: PCQAT can save, but load model has issues
-        if os.path.exists(self.model_path) and self._method != "pcqat":
-            with tfmot.quantization.keras.quantize_scope():
-                self.model = tf.keras.models.load_model(self.model_path)
-            return
+        try:
+            if os.path.exists(self.model_path):
+                with tfmot.quantization.keras.quantize_scope():
+                    self.model = tf.keras.models.load_model(self.model_path)
+        except ValueError as e:
+            self._logger.error(f"PCQAT model cannot load {self.model_path}. {e}")
 
         train_kwargs = dict()
         train_kwargs["batch_size"] = self.batch_size
