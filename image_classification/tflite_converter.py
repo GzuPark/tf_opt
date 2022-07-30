@@ -31,15 +31,15 @@ class ImageClassificationConverter(object):
         self._logger = logger
 
     def _initialize(self) -> None:
-        optimizers = dict()
+        quant_methods = dict()
 
-        optimizers["fp32"] = self._get_fp32
-        optimizers["fp16"] = self._get_fp16
-        optimizers["dynamic"] = self._get_dynamic
-        optimizers["uin8"] = self._get_uint8
-        optimizers["int16x8"] = self._get_int16x8
+        quant_methods["fp32"] = self._get_fp32
+        quant_methods["fp16"] = self._get_fp16
+        quant_methods["dynamic"] = self._get_dynamic
+        quant_methods["uin8"] = self._get_uint8
+        quant_methods["int16x8"] = self._get_int16x8
 
-        target_optimizer = optimizers.get(self._method, self._get_dynamic)
+        target_optimizer = quant_methods.get(self._method, self._get_dynamic)
         target_optimizer()
 
     def _get_fp32(self) -> None:
