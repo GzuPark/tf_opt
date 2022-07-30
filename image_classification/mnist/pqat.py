@@ -25,11 +25,10 @@ class PQATModel(BaseModel):
             method: str = "PQAT",
             verbose: bool = False,
     ) -> None:
-        super().__init__(root_dir, dataset, valid_split, batch_size, epochs)
+        super().__init__(root_dir, dataset, valid_split, batch_size, epochs, verbose)
 
         self.model = None
         self.model_path = os.path.join(self.ckpt_dir, f"mnist_prune_{method}_keras.h5")
-        self.verbose = 1 if verbose else 0
         self._method = method.lower() if method.lower() in {"qat", "pqat"} else "pqat"
         self._base_model = None
 

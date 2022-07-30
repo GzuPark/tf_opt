@@ -12,10 +12,12 @@ class BaseModel(object):
             valid_split: float = 0.0,
             batch_size: int = 128,
             epochs: int = 5,
+            verbose: bool = False,
     ) -> None:
         self.valid_split = valid_split
         self.batch_size = batch_size
         self.epochs = epochs
+        self.verbose = 1 if verbose else 0
 
         self.x_train = dataset["x_train"]
         self.y_train = dataset["y_train"]
