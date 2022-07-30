@@ -21,14 +21,14 @@ class ImageClassificationConverter(object):
     ) -> None:
         self.data = dataset
 
-        self._ckpt_dir = os.path.join(root_dir, "ckpt")
+        self._ckpt_dir = os.path.join(root_dir, "ckpt", dataset_name)
         self._model_path = os.path.join(self._ckpt_dir, f"{dataset_name}_{optimizer}_{method}.tflite")
         self._method = method if method in {"fp32", "fp16", "uint8", "dynamic", "int16x8"} else "dynamic"
         self._optimizer = optimizer
         self._converter = None
         self._interpreter = None
 
-        self.logger = logger
+        self._logger = logger
 
     def _initialize(self) -> None:
         optimizers = dict()
@@ -119,6 +119,6 @@ class ImageClassificationConverter(object):
         result["model_file_size"] = os.path.getsize(self._model_path)
         result["accuracy"] = (np.sum(self.data["y_test"] == predictions) / len(self.data["y_test"])).astype(float)
 
-        self.logger.info(result)
+        self._logger.info(result)
 
         return result

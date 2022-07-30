@@ -22,7 +22,7 @@ class BaseModel(object):
         self.x_test = dataset["x_test"]
         self.y_test = dataset["y_test"]
 
-        self.ckpt_dir = os.path.join(root_dir, "ckpt")
+        self.ckpt_dir = os.path.join(root_dir, "ckpt", "mnist")
         if not os.path.exists(self.ckpt_dir):
             os.makedirs(self.ckpt_dir)
 
