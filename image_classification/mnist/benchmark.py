@@ -3,7 +3,7 @@ import logging
 import os
 
 from time import sleep
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Union
 
 import numpy as np
 import tensorflow as tf
@@ -63,7 +63,12 @@ class Benchmark(BenchmarkInterface):
 
         return result
 
-    def get_keras_kwargs(self) -> Dict[str, Any]:
+    def get_keras_kwargs(
+            self,
+            model_filename: str,
+            base_model_filename: Union[str, None] = None,
+            method: Union[str, None] = None,
+    ) -> Dict[str, Any]:
         result = dict()
 
         result["root_dir"] = self.root_dir
@@ -72,15 +77,21 @@ class Benchmark(BenchmarkInterface):
         result["valid_split"] = self.valid_split
         result["verbose"] = self.verbose
         result["dataset"] = self.dataset
+        result["model_filename"] = f"mnist_{model_filename}_keras.h5"
+        if base_model_filename is not None:
+            result["base_model_filename"] = f"mnist_{base_model_filename}_keras.h5"
+        if method is not None:
+            result["method"] = method
 
         return result
 
-    def get_tflite_kwargs(self) -> Dict[str, Any]:
+    def get_tflite_kwargs(self, optimizer: str) -> Dict[str, Any]:
         result = dict()
 
         result["root_dir"] = self.root_dir
         result["dataset_name"] = "mnist"
         result["dataset"] = self.dataset
+        result["optimizer"] = optimizer
 
         return result
 
@@ -102,140 +113,69 @@ class Benchmark(BenchmarkInterface):
         return result.get(optimize, self._get_optimize_none)
 
     def _get_optimize_none(self) -> Any:
-        self.keras_kwargs = self.get_keras_kwargs()
-        self.keras_kwargs["model_filename"] = "mnist_none_keras.h5"
-
-        self.tflite_kwargs = self.get_tflite_kwargs()
-        self.tflite_kwargs["optimizer"] = "none"
-
+        self.keras_kwargs = self.get_keras_kwargs("none")
+        self.tflite_kwargs = self.get_tflite_kwargs("none")
         self.tflite_methods = self.tflite_methods_group.get("all")
-
         return mnist.BasicModel
 
     def _get_optimize_prune(self) -> Any:
-        self.keras_kwargs = self.get_keras_kwargs()
-        self.keras_kwargs["model_filename"] = "mnist_prune_keras.h5"
-        self.keras_kwargs["base_model_filename"] = "mnist_none_keras.h5"
-
-        self.tflite_kwargs = self.get_tflite_kwargs()
-        self.tflite_kwargs["optimizer"] = "prune"
-
+        self.keras_kwargs = self.get_keras_kwargs("prune", "none")
+        self.tflite_kwargs = self.get_tflite_kwargs("prune")
         self.tflite_methods = self.tflite_methods_group.get("all")
-
         return mnist.PruningModel
 
     def _get_optimize_quant(self) -> Any:
-        self.keras_kwargs = self.get_keras_kwargs()
-        self.keras_kwargs["model_filename"] = "mnist_quant_keras.h5"
-        self.keras_kwargs["base_model_filename"] = "mnist_none_keras.h5"
-
-        self.tflite_kwargs = self.get_tflite_kwargs()
-        self.tflite_kwargs["optimizer"] = "quant"
-
+        self.keras_kwargs = self.get_keras_kwargs("quant", "none")
+        self.tflite_kwargs = self.get_tflite_kwargs("quant")
         self.tflite_methods = self.tflite_methods_group.get("default")
-
         return mnist.QuantizationModel
 
     def _get_optimize_cluster(self) -> Any:
-        self.keras_kwargs = self.get_keras_kwargs()
-        self.keras_kwargs["model_filename"] = "mnist_cluster_keras.h5"
-        self.keras_kwargs["base_model_filename"] = "mnist_none_keras.h5"
-
-        self.tflite_kwargs = self.get_tflite_kwargs()
-        self.tflite_kwargs["optimizer"] = "cluster"
-
+        self.keras_kwargs = self.get_keras_kwargs("cluster", "none")
+        self.tflite_kwargs = self.get_tflite_kwargs("cluster")
         self.tflite_methods = self.tflite_methods_group.get("all")
-
         return mnist.ClusteringModel
 
     def _get_optimize_cluster_qat(self) -> Any:
-        self.keras_kwargs = self.get_keras_kwargs()
-        self.keras_kwargs["model_filename"] = "mnist_cluster_qat_keras.h5"
-        self.keras_kwargs["base_model_filename"] = "mnist_cluster_keras.h5"
-        self.keras_kwargs["method"] = "qat"
-
-        self.tflite_kwargs = self.get_tflite_kwargs()
-        self.tflite_kwargs["optimizer"] = "cluster_qat"
-
+        self.keras_kwargs = self.get_keras_kwargs("cluster_qat", "cluster", "qat")
+        self.tflite_kwargs = self.get_tflite_kwargs("cluster_qat")
         self.tflite_methods = self.tflite_methods_group.get("default")
-
         return mnist.CQATModel
 
     def _get_optimize_cluster_cqat(self) -> Any:
-        self.keras_kwargs = self.get_keras_kwargs()
-        self.keras_kwargs["model_filename"] = "mnist_cluster_cqat_keras.h5"
-        self.keras_kwargs["base_model_filename"] = "mnist_cluster_keras.h5"
-        self.keras_kwargs["method"] = "cqat"
-
-        self.tflite_kwargs = self.get_tflite_kwargs()
-        self.tflite_kwargs["optimizer"] = "cluster_cqat"
-
+        self.keras_kwargs = self.get_keras_kwargs("cluster_cqat", "cluster", "cqat")
+        self.tflite_kwargs = self.get_tflite_kwargs("cluster_cqat")
         self.tflite_methods = self.tflite_methods_group.get("default")
-
         return mnist.CQATModel
 
     def _get_optimize_prune_qat(self) -> Any:
-        self.keras_kwargs = self.get_keras_kwargs()
-        self.keras_kwargs["model_filename"] = "mnist_prune_qat_keras.h5"
-        self.keras_kwargs["base_model_filename"] = "mnist_prune_keras.h5"
-        self.keras_kwargs["method"] = "qat"
-
-        self.tflite_kwargs = self.get_tflite_kwargs()
-        self.tflite_kwargs["optimizer"] = "prune_qat"
-
+        self.keras_kwargs = self.get_keras_kwargs("prune_qat", "prune", "qat")
+        self.tflite_kwargs = self.get_tflite_kwargs("prune_qat")
         self.tflite_methods = self.tflite_methods_group.get("default")
-
         return mnist.PQATModel
 
     def _get_optimize_prune_pqat(self) -> Any:
-        self.keras_kwargs = self.get_keras_kwargs()
-        self.keras_kwargs["model_filename"] = "mnist_prune_pqat_keras.h5"
-        self.keras_kwargs["base_model_filename"] = "mnist_prune_keras.h5"
-        self.keras_kwargs["method"] = "pqat"
-
-        self.tflite_kwargs = self.get_tflite_kwargs()
-        self.tflite_kwargs["optimizer"] = "prune_pqat"
-
+        self.keras_kwargs = self.get_keras_kwargs("prune_pqat", "prune", "pqat")
+        self.tflite_kwargs = self.get_tflite_kwargs("prune_pqat")
         self.tflite_methods = self.tflite_methods_group.get("default")
-
         return mnist.PQATModel
 
     def _get_optimize_prune_cluster(self) -> Any:
-        self.keras_kwargs = self.get_keras_kwargs()
-        self.keras_kwargs["model_filename"] = "mnist_prune_cluster_keras.h5"
-        self.keras_kwargs["base_model_filename"] = "mnist_prune_keras.h5"
-
-        self.tflite_kwargs = self.get_tflite_kwargs()
-        self.tflite_kwargs["optimizer"] = "prune_cluster"
-
+        self.keras_kwargs = self.get_keras_kwargs("prune_cluster", "prune")
+        self.tflite_kwargs = self.get_tflite_kwargs("prune_cluster")
         self.tflite_methods = self.tflite_methods_group.get("default")
-
         return mnist.PruneClusterModel
 
     def _get_optimize_prune_cluster_qat(self) -> Any:
-        self.keras_kwargs = self.get_keras_kwargs()
-        self.keras_kwargs["model_filename"] = "mnist_prune_cluster_qat_keras.h5"
-        self.keras_kwargs["base_model_filename"] = "mnist_prune_cluster_keras.h5"
-        self.keras_kwargs["method"] = "qat"
-
-        self.tflite_kwargs = self.get_tflite_kwargs()
-        self.tflite_kwargs["optimizer"] = "prune_cluster_qat"
-
+        self.keras_kwargs = self.get_keras_kwargs("prune_cluster_qat", "prune_cluster", "qat")
+        self.tflite_kwargs = self.get_tflite_kwargs("prune_cluster_qat")
         self.tflite_methods = self.tflite_methods_group.get("default")
-
         return mnist.PCQATModel
 
     def _get_optimize_prune_cluster_pcqat(self) -> Any:
-        self.keras_kwargs = self.get_keras_kwargs()
-        self.keras_kwargs["model_filename"] = "mnist_prune_cluster_pcqat_keras.h5"
-        self.keras_kwargs["base_model_filename"] = "mnist_prune_cluster_keras.h5"
-        self.keras_kwargs["method"] = "pcqat"
-
-        self.tflite_kwargs = self.get_tflite_kwargs()
-        self.tflite_kwargs["optimizer"] = "prune_cluster_pcqat"
-
+        self.keras_kwargs = self.get_keras_kwargs("prune_cluster_pcqat", "prune_cluster", "pcqat")
+        self.tflite_kwargs = self.get_tflite_kwargs("prune_cluster_pcqat")
         self.tflite_methods = self.tflite_methods_group.get("default")
-
         return mnist.PCQATModel
 
     def run_modules(self, module: Any, logger: logging.Logger) -> List[Dict[str, Any]]:

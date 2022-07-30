@@ -16,11 +16,11 @@ class BenchmarkInterface(ABC):
         pass
 
     @abstractmethod
-    def get_keras_kwargs(self) -> Any:
+    def get_keras_kwargs(self, model_filename: str, base_model_filename: str, method: str) -> Any:
         pass
 
     @abstractmethod
-    def get_tflite_kwargs(self) -> Any:
+    def get_tflite_kwargs(self, optimizer: str) -> Any:
         pass
 
     @abstractmethod
