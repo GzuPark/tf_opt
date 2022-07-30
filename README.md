@@ -27,7 +27,7 @@ the [model optimization reference from TensorFlow](https://www.tensorflow.org/mo
 |    dynamic |                prune |      97.26 % |        376.9 ms |        23.30 KB |
 |      uint8 |                prune |      97.26 % |        364.7 ms |        23.30 KB |
 |    int16x8 |                prune |      97.26 % |       1975.1 ms |        24.16 KB |
-|      keras |             quantize |      97.79 % |        346.1 ms |       283.45 KB |
+|      keras |                quant |      97.79 % |        346.1 ms |       283.45 KB |
 |       fp32 |                quant |      97.79 % |        413.8 ms |       167.73 KB |
 |       fp16 |                quant |      97.79 % |        329.6 ms |        24.16 KB |
 |    dynamic |                quant |      97.79 % |        330.5 ms |        24.16 KB |
