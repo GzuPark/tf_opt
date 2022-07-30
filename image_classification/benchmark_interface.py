@@ -16,6 +16,14 @@ class BenchmarkInterface(ABC):
         pass
 
     @abstractmethod
+    def get_keras_kwargs(self) -> Any:
+        pass
+
+    @abstractmethod
+    def get_tflite_kwargs(self) -> Any:
+        pass
+
+    @abstractmethod
     def get_optimize_module(self, optimize: str) -> Any:
         pass
 
