@@ -103,6 +103,7 @@ class Benchmark(BenchmarkInterface):
 
     def _get_optimize_none(self) -> Any:
         self.keras_kwargs = self.get_keras_kwargs()
+        self.keras_kwargs["model_filename"] = "mnist_none_keras.h5"
 
         self.tflite_kwargs = self.get_tflite_kwargs()
         self.tflite_kwargs["optimizer"] = "none"
@@ -113,7 +114,8 @@ class Benchmark(BenchmarkInterface):
 
     def _get_optimize_prune(self) -> Any:
         self.keras_kwargs = self.get_keras_kwargs()
-        self.keras_kwargs["base_model_name"] = "mnist_none_keras.h5"
+        self.keras_kwargs["model_filename"] = "mnist_prune_keras.h5"
+        self.keras_kwargs["base_model_filename"] = "mnist_none_keras.h5"
 
         self.tflite_kwargs = self.get_tflite_kwargs()
         self.tflite_kwargs["optimizer"] = "prune"
@@ -124,7 +126,8 @@ class Benchmark(BenchmarkInterface):
 
     def _get_optimize_quant(self) -> Any:
         self.keras_kwargs = self.get_keras_kwargs()
-        self.keras_kwargs["base_model_name"] = "mnist_none_keras.h5"
+        self.keras_kwargs["model_filename"] = "mnist_quant_keras.h5"
+        self.keras_kwargs["base_model_filename"] = "mnist_none_keras.h5"
 
         self.tflite_kwargs = self.get_tflite_kwargs()
         self.tflite_kwargs["optimizer"] = "quant"
@@ -135,7 +138,8 @@ class Benchmark(BenchmarkInterface):
 
     def _get_optimize_cluster(self) -> Any:
         self.keras_kwargs = self.get_keras_kwargs()
-        self.keras_kwargs["base_model_name"] = "mnist_none_keras.h5"
+        self.keras_kwargs["model_filename"] = "mnist_cluster_keras.h5"
+        self.keras_kwargs["base_model_filename"] = "mnist_none_keras.h5"
 
         self.tflite_kwargs = self.get_tflite_kwargs()
         self.tflite_kwargs["optimizer"] = "cluster"
@@ -146,7 +150,8 @@ class Benchmark(BenchmarkInterface):
 
     def _get_optimize_cluster_qat(self) -> Any:
         self.keras_kwargs = self.get_keras_kwargs()
-        self.keras_kwargs["base_model_name"] = "mnist_cluster_keras.h5"
+        self.keras_kwargs["model_filename"] = "mnist_cluster_qat_keras.h5"
+        self.keras_kwargs["base_model_filename"] = "mnist_cluster_keras.h5"
         self.keras_kwargs["method"] = "qat"
 
         self.tflite_kwargs = self.get_tflite_kwargs()
@@ -158,7 +163,8 @@ class Benchmark(BenchmarkInterface):
 
     def _get_optimize_cluster_cqat(self) -> Any:
         self.keras_kwargs = self.get_keras_kwargs()
-        self.keras_kwargs["base_model_name"] = "mnist_cluster_keras.h5"
+        self.keras_kwargs["model_filename"] = "mnist_cluster_cqat_keras.h5"
+        self.keras_kwargs["base_model_filename"] = "mnist_cluster_keras.h5"
         self.keras_kwargs["method"] = "cqat"
 
         self.tflite_kwargs = self.get_tflite_kwargs()
@@ -170,18 +176,21 @@ class Benchmark(BenchmarkInterface):
 
     def _get_optimize_prune_qat(self) -> Any:
         self.keras_kwargs = self.get_keras_kwargs()
-        self.keras_kwargs["base_model_name"] = "mnist_prune_keras.h5"
+        self.keras_kwargs["model_filename"] = "mnist_prune_qat_keras.h5"
+        self.keras_kwargs["base_model_filename"] = "mnist_prune_keras.h5"
         self.keras_kwargs["method"] = "qat"
 
         self.tflite_kwargs = self.get_tflite_kwargs()
         self.tflite_kwargs["optimizer"] = "prune_qat"
+
         self.tflite_methods = self.tflite_methods_group.get("default")
 
         return mnist.PQATModel
 
     def _get_optimize_prune_pqat(self) -> Any:
         self.keras_kwargs = self.get_keras_kwargs()
-        self.keras_kwargs["base_model_name"] = "mnist_prune_keras.h5"
+        self.keras_kwargs["model_filename"] = "mnist_prune_pqat_keras.h5"
+        self.keras_kwargs["base_model_filename"] = "mnist_prune_keras.h5"
         self.keras_kwargs["method"] = "pqat"
 
         self.tflite_kwargs = self.get_tflite_kwargs()
@@ -193,7 +202,8 @@ class Benchmark(BenchmarkInterface):
 
     def _get_optimize_prune_cluster(self) -> Any:
         self.keras_kwargs = self.get_keras_kwargs()
-        self.keras_kwargs["base_model_name"] = "mnist_prune_keras.h5"
+        self.keras_kwargs["model_filename"] = "mnist_prune_cluster_keras.h5"
+        self.keras_kwargs["base_model_filename"] = "mnist_prune_keras.h5"
 
         self.tflite_kwargs = self.get_tflite_kwargs()
         self.tflite_kwargs["optimizer"] = "prune_cluster"
@@ -204,7 +214,8 @@ class Benchmark(BenchmarkInterface):
 
     def _get_optimize_prune_cluster_qat(self) -> Any:
         self.keras_kwargs = self.get_keras_kwargs()
-        self.keras_kwargs["base_model_name"] = "mnist_prune_cluster_keras.h5"
+        self.keras_kwargs["model_filename"] = "mnist_prune_cluster_qat_keras.h5"
+        self.keras_kwargs["base_model_filename"] = "mnist_prune_cluster_keras.h5"
         self.keras_kwargs["method"] = "qat"
 
         self.tflite_kwargs = self.get_tflite_kwargs()
@@ -216,7 +227,8 @@ class Benchmark(BenchmarkInterface):
 
     def _get_optimize_prune_cluster_pcqat(self) -> Any:
         self.keras_kwargs = self.get_keras_kwargs()
-        self.keras_kwargs["base_model_name"] = "mnist_prune_cluster_keras.h5"
+        self.keras_kwargs["model_filename"] = "mnist_prune_cluster_pcqat_keras.h5"
+        self.keras_kwargs["base_model_filename"] = "mnist_prune_cluster_keras.h5"
         self.keras_kwargs["method"] = "pcqat"
 
         self.tflite_kwargs = self.get_tflite_kwargs()

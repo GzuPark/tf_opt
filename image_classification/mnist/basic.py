@@ -14,6 +14,7 @@ class BasicModel(BaseModel):
     def __init__(
             self,
             root_dir: str,
+            model_filename: str,
             dataset: Dict[str, Any],
             valid_split: float,
             batch_size: int,
@@ -24,7 +25,7 @@ class BasicModel(BaseModel):
         super().__init__(root_dir, dataset, valid_split, batch_size, epochs, verbose)
 
         self.model = None
-        self.model_path = os.path.join(self.ckpt_dir, "mnist_none_keras.h5")
+        self.model_path = os.path.join(self.ckpt_dir, model_filename)
 
         self._logger = logger
         self._logger.info("Run without optimizing")

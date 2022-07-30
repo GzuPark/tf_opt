@@ -16,7 +16,8 @@ class PruningModel(BaseModel):
     def __init__(
             self,
             root_dir: str,
-            base_model_name: str,
+            model_filename: str,
+            base_model_filename: str,
             dataset: Dict[str, Any],
             valid_split: float,
             batch_size: int,
@@ -27,10 +28,10 @@ class PruningModel(BaseModel):
         super().__init__(root_dir, dataset, valid_split, batch_size, epochs, verbose)
 
         self.model = None
-        self.model_path = os.path.join(self.ckpt_dir, "mnist_prune_keras.h5")
+        self.model_path = os.path.join(self.ckpt_dir, model_filename)
         self._base_model = None
 
-        base_model_path = os.path.join(self.ckpt_dir, base_model_name)
+        base_model_path = os.path.join(self.ckpt_dir, base_model_filename)
         if os.path.exists(base_model_path):
             self._base_model = tf.keras.models.load_model(base_model_path)
         else:
