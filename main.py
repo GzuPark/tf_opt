@@ -20,8 +20,16 @@ def run_mnist(path: str) -> None:
         "prune_cluster_pcqat",
     ]
 
+    tflite_quantize_methods = [
+        "fp32",
+        "fp16",
+        "dynamic",
+        "uint8",
+        "int16x8",
+    ]
+
     logger = utils.get_logger(path, "mnist")
-    benchmark = mnist.Benchmark(path)
+    benchmark = mnist.Benchmark(path, tflite_quantize_methods)
     result = list()
 
     for tf_model_optimize_method in tf_model_optimize_methods:

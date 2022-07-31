@@ -19,6 +19,7 @@ class Benchmark(BenchmarkInterface):
     def __init__(
             self,
             path: str,
+            tflite_methods: List[str],
             batch_size: int = 128,
             epochs: int = 5,
             valid_split: float = 0.1,
@@ -31,14 +32,9 @@ class Benchmark(BenchmarkInterface):
         self.verbose = verbose
         self.dataset = self.load_dataset(path)
 
+        self.tflite_methods = tflite_methods
         self.keras_kwargs = None
         self.tflite_kwargs = None
-
-        self.tflite_methods_group = dict()
-        self.tflite_methods_group["default"] = ["fp32", "fp16", "dynamic", "uint8"]
-        self.tflite_methods_group["all"] = ["fp32", "fp16", "dynamic", "uint8", "int16x8"]
-
-        self.tflite_methods = None
 
     @staticmethod
     def load_dataset(root_dir: str) -> Dict[str, np.ndarray]:
@@ -115,67 +111,56 @@ class Benchmark(BenchmarkInterface):
     def _get_optimize_none(self) -> Any:
         self.keras_kwargs = self.get_keras_kwargs("none")
         self.tflite_kwargs = self.get_tflite_kwargs("none")
-        self.tflite_methods = self.tflite_methods_group.get("all")
         return mnist.BasicModel
 
     def _get_optimize_prune(self) -> Any:
         self.keras_kwargs = self.get_keras_kwargs("prune", "none")
         self.tflite_kwargs = self.get_tflite_kwargs("prune")
-        self.tflite_methods = self.tflite_methods_group.get("all")
         return mnist.PruningModel
 
     def _get_optimize_quant(self) -> Any:
         self.keras_kwargs = self.get_keras_kwargs("quant", "none")
         self.tflite_kwargs = self.get_tflite_kwargs("quant")
-        self.tflite_methods = self.tflite_methods_group.get("default")
         return mnist.QuantizationModel
 
     def _get_optimize_cluster(self) -> Any:
         self.keras_kwargs = self.get_keras_kwargs("cluster", "none")
         self.tflite_kwargs = self.get_tflite_kwargs("cluster")
-        self.tflite_methods = self.tflite_methods_group.get("all")
         return mnist.ClusteringModel
 
     def _get_optimize_cluster_qat(self) -> Any:
         self.keras_kwargs = self.get_keras_kwargs("cluster_qat", "cluster", "qat")
         self.tflite_kwargs = self.get_tflite_kwargs("cluster_qat")
-        self.tflite_methods = self.tflite_methods_group.get("default")
         return mnist.CQATModel
 
     def _get_optimize_cluster_cqat(self) -> Any:
         self.keras_kwargs = self.get_keras_kwargs("cluster_cqat", "cluster", "cqat")
         self.tflite_kwargs = self.get_tflite_kwargs("cluster_cqat")
-        self.tflite_methods = self.tflite_methods_group.get("default")
         return mnist.CQATModel
 
     def _get_optimize_prune_qat(self) -> Any:
         self.keras_kwargs = self.get_keras_kwargs("prune_qat", "prune", "qat")
         self.tflite_kwargs = self.get_tflite_kwargs("prune_qat")
-        self.tflite_methods = self.tflite_methods_group.get("default")
         return mnist.PQATModel
 
     def _get_optimize_prune_pqat(self) -> Any:
         self.keras_kwargs = self.get_keras_kwargs("prune_pqat", "prune", "pqat")
         self.tflite_kwargs = self.get_tflite_kwargs("prune_pqat")
-        self.tflite_methods = self.tflite_methods_group.get("default")
         return mnist.PQATModel
 
     def _get_optimize_prune_cluster(self) -> Any:
         self.keras_kwargs = self.get_keras_kwargs("prune_cluster", "prune")
         self.tflite_kwargs = self.get_tflite_kwargs("prune_cluster")
-        self.tflite_methods = self.tflite_methods_group.get("default")
         return mnist.PruneClusterModel
 
     def _get_optimize_prune_cluster_qat(self) -> Any:
         self.keras_kwargs = self.get_keras_kwargs("prune_cluster_qat", "prune_cluster", "qat")
         self.tflite_kwargs = self.get_tflite_kwargs("prune_cluster_qat")
-        self.tflite_methods = self.tflite_methods_group.get("default")
         return mnist.PCQATModel
 
     def _get_optimize_prune_cluster_pcqat(self) -> Any:
         self.keras_kwargs = self.get_keras_kwargs("prune_cluster_pcqat", "prune_cluster", "pcqat")
         self.tflite_kwargs = self.get_tflite_kwargs("prune_cluster_pcqat")
-        self.tflite_methods = self.tflite_methods_group.get("default")
         return mnist.PCQATModel
 
     def run_modules(
@@ -196,11 +181,14 @@ class Benchmark(BenchmarkInterface):
         result.append(model.evaluate())
 
         for method in self.tflite_methods:
-            converter = ImageClassificationConverter(method=method, logger=logger, **self.tflite_kwargs)
-            converter.convert(model=model.model)
-            result.append(converter.evaluate())
-
-            del converter
+            try:
+                converter = ImageClassificationConverter(method=method, logger=logger, **self.tflite_kwargs)
+                converter.convert(model=model.model)
+                result.append(converter.evaluate())
+                del converter
+            except RuntimeError as e:
+                _e = str(e).replace("\n", "")
+                logger.error(f"TFLite cannot convert '{self.tflite_kwargs.get('optimizer')}' '{method}'. {_e}")
 
         del model
         self.keras_kwargs = None
