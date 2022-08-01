@@ -75,10 +75,8 @@ class Benchmark(BenchmarkInterface):
         result["verbose"] = self.verbose
         result["dataset"] = self.dataset
         result["model_filename"] = f"mnist_{model_filename}_keras.h5"
-        if base_model_filename is not None:
-            result["base_model_filename"] = f"mnist_{base_model_filename}_keras.h5"
-        if method is not None:
-            result["method"] = method
+        result["base_model_filename"] = None if base_model_filename is None else f"mnist_{base_model_filename}_keras.h5"
+        result["method"] = method
 
         return result
 

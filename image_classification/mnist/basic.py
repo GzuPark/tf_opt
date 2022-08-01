@@ -22,11 +22,13 @@ class BasicModel(BaseModel):
             epochs: int,
             logger: logging.Logger,
             verbose: bool = False,
+            **kwargs,
     ) -> None:
         super().__init__(root_dir, dataset, valid_split, batch_size, epochs, verbose)
 
         self.model = None
         self.model_path = os.path.join(self.ckpt_dir, model_filename)
+        _ = kwargs
 
         self._logger = logger
         self._logger.info("Run without optimizing")

@@ -25,6 +25,7 @@ class PruningModel(BaseModel):
             epochs: int,
             logger: logging.Logger,
             verbose: bool = False,
+            **kwargs,
     ) -> None:
         super().__init__(root_dir, dataset, valid_split, batch_size, epochs, verbose)
 
@@ -32,6 +33,7 @@ class PruningModel(BaseModel):
         self.model_path = os.path.join(self.ckpt_dir, model_filename)
         self._base_model_path = os.path.join(self.ckpt_dir, base_model_filename)
         self._base_model = None
+        _ = kwargs
 
         self._logger = logger
         self._logger.info("Run weight pruning")
