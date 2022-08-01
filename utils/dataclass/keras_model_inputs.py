@@ -12,5 +12,6 @@ class KerasModelInputs(object):
     valid_split: float
     model_filename: str
     base_model_filename: Union[str, None]
-    method: Union[TFOptimize, None]
+    method: str
+    optimizer: Union[TFOptimize, None]
     verbose: bool

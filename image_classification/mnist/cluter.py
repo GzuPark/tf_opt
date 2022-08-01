@@ -20,7 +20,8 @@ class ClusteringModel(BaseModel):
         self.model_path = os.path.join(self.ckpt_dir, inputs.model_filename)
         self._base_model_path = os.path.join(self.ckpt_dir, inputs.base_model_filename)
         self._base_model = None
-        self._optimizer = inputs.method
+        self._method = inputs.method
+        self._optimizer = inputs.optimizer
 
         self._logger = logger
         self._logger.info(f"Run {self._optimizer}")
@@ -89,7 +90,7 @@ class ClusteringModel(BaseModel):
         end_time = perf_counter()
 
         result = Result(
-            method="keras",
+            method=str(self._method),
             optimizer=str(self._optimizer),
             accuracy=accuracy,
             total_time=end_time - start_time,

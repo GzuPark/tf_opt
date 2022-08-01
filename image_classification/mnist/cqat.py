@@ -20,10 +20,10 @@ class CQATModel(BaseModel):
 
         self.model = None
         self.model_path = os.path.join(self.ckpt_dir, inputs.model_filename)
-        self._method = inputs.method
         self._base_model_path = os.path.join(self.ckpt_dir, inputs.base_model_filename)
         self._base_model = None
-        self._optimizer = inputs.method
+        self._method = inputs.method
+        self._optimizer = inputs.optimizer
 
         self._logger = logger
         self._logger.info(f"Run {self._optimizer}")
@@ -50,7 +50,7 @@ class CQATModel(BaseModel):
         models[TFOptimize.ClusteringQAT] = self._get_qat_model
         models[TFOptimize.ClusteringCQAT] = self._get_cqat_model
 
-        target_model = models.get(self._method, self._get_cqat_model)
+        target_model = models.get(self._optimizer, self._get_cqat_model)
         self.model = target_model()
 
         if self.verbose:
@@ -102,7 +102,7 @@ class CQATModel(BaseModel):
         end_time = perf_counter()
 
         result = Result(
-            method="keras",
+            method=str(self._method),
             optimizer=str(self._optimizer),
             accuracy=accuracy,
             total_time=end_time - start_time,

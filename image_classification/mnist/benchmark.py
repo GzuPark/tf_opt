@@ -63,7 +63,7 @@ class Benchmark(BenchmarkInterface):
 
     def _get_keras_inputs(
             self,
-            method: TFOptimize,
+            optimizer: TFOptimize,
             base_model_filename: Union[TFOptimize, None] = None,
     ) -> KerasModelInputs:
         return KerasModelInputs(
@@ -71,9 +71,10 @@ class Benchmark(BenchmarkInterface):
             batch_size=self.batch_size,
             epochs=self.epochs,
             valid_split=self.valid_split,
-            model_filename=f"mnist_{str(method)}_keras.h5",
+            model_filename=f"mnist_{optimizer}_keras.h5",
             base_model_filename=None if base_model_filename is None else f"mnist_{str(base_model_filename)}_keras.h5",
-            method=method,
+            method="keras",
+            optimizer=optimizer,
             verbose=self.verbose,
         )
 
