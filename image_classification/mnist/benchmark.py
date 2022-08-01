@@ -12,7 +12,7 @@ import image_classification.mnist as mnist
 
 from image_classification.benchmark_interface import BenchmarkInterface
 from image_classification.tflite_converter import ImageClassificationConverter
-from utils.dataclass import KerasModelInputs, Result
+from utils.dataclass import KerasModelInputs, TFLiteModelInputs, Result
 
 
 class Benchmark(BenchmarkInterface):
@@ -34,8 +34,8 @@ class Benchmark(BenchmarkInterface):
         self.dataset = self.load_dataset(path)
 
         self.tflite_methods = tflite_methods
-        self._keras_inputs = None
-        self.tflite_kwargs = None
+        self._keras_inputs: KerasModelInputs
+        self._tflite_inputs: TFLiteModelInputs
 
     @staticmethod
     def load_dataset(root_dir: str) -> Dict[str, np.ndarray]:
@@ -77,15 +77,13 @@ class Benchmark(BenchmarkInterface):
             verbose=self.verbose,
         )
 
-    def get_tflite_kwargs(self, optimizer: str) -> Dict[str, Any]:
-        result = dict()
-
-        result["root_dir"] = self.root_dir
-        result["dataset_name"] = "mnist"
-        result["dataset"] = self.dataset
-        result["optimizer"] = optimizer
-
-        return result
+    def _get_tflite_inputs(self, optimizer: str, method: str = "dynamic") -> TFLiteModelInputs:
+        return TFLiteModelInputs(
+            root_dir=self.root_dir,
+            dataset_name="mnist",
+            optimizer=optimizer,
+            method=method,
+        )
 
     def get_optimize_module(self, optimize: str) -> Any:
         result = dict()
@@ -106,57 +104,57 @@ class Benchmark(BenchmarkInterface):
 
     def _get_optimize_none(self) -> Any:
         self._keras_inputs = self._get_keras_inputs("none")
-        self.tflite_kwargs = self.get_tflite_kwargs("none")
+        self._tflite_inputs = self._get_tflite_inputs("none")
         return mnist.BasicModel
 
     def _get_optimize_prune(self) -> Any:
         self._keras_inputs = self._get_keras_inputs("prune", "none")
-        self.tflite_kwargs = self.get_tflite_kwargs("prune")
+        self._tflite_inputs = self._get_tflite_inputs("prune")
         return mnist.PruningModel
 
     def _get_optimize_quant(self) -> Any:
         self._keras_inputs = self._get_keras_inputs("quant", "none")
-        self.tflite_kwargs = self.get_tflite_kwargs("quant")
+        self._tflite_inputs = self._get_tflite_inputs("quant")
         return mnist.QuantizationModel
 
     def _get_optimize_cluster(self) -> Any:
         self._keras_inputs = self._get_keras_inputs("cluster", "none")
-        self.tflite_kwargs = self.get_tflite_kwargs("cluster")
+        self._tflite_inputs = self._get_tflite_inputs("cluster")
         return mnist.ClusteringModel
 
     def _get_optimize_cluster_qat(self) -> Any:
         self._keras_inputs = self._get_keras_inputs("cluster_qat", "cluster", "qat")
-        self.tflite_kwargs = self.get_tflite_kwargs("cluster_qat")
+        self._tflite_inputs = self._get_tflite_inputs("cluster_qat")
         return mnist.CQATModel
 
     def _get_optimize_cluster_cqat(self) -> Any:
         self._keras_inputs = self._get_keras_inputs("cluster_cqat", "cluster", "cqat")
-        self.tflite_kwargs = self.get_tflite_kwargs("cluster_cqat")
+        self._tflite_inputs = self._get_tflite_inputs("cluster_cqat")
         return mnist.CQATModel
 
     def _get_optimize_prune_qat(self) -> Any:
         self._keras_inputs = self._get_keras_inputs("prune_qat", "prune", "qat")
-        self.tflite_kwargs = self.get_tflite_kwargs("prune_qat")
+        self._tflite_inputs = self._get_tflite_inputs("prune_qat")
         return mnist.PQATModel
 
     def _get_optimize_prune_pqat(self) -> Any:
         self._keras_inputs = self._get_keras_inputs("prune_pqat", "prune", "pqat")
-        self.tflite_kwargs = self.get_tflite_kwargs("prune_pqat")
+        self._tflite_inputs = self._get_tflite_inputs("prune_pqat")
         return mnist.PQATModel
 
     def _get_optimize_prune_cluster(self) -> Any:
         self._keras_inputs = self._get_keras_inputs("prune_cluster", "prune")
-        self.tflite_kwargs = self.get_tflite_kwargs("prune_cluster")
+        self._tflite_inputs = self._get_tflite_inputs("prune_cluster")
         return mnist.PruneClusterModel
 
     def _get_optimize_prune_cluster_qat(self) -> Any:
         self._keras_inputs = self._get_keras_inputs("prune_cluster_qat", "prune_cluster", "qat")
-        self.tflite_kwargs = self.get_tflite_kwargs("prune_cluster_qat")
+        self._tflite_inputs = self._get_tflite_inputs("prune_cluster_qat")
         return mnist.PCQATModel
 
     def _get_optimize_prune_cluster_pcqat(self) -> Any:
         self._keras_inputs = self._get_keras_inputs("prune_cluster_pcqat", "prune_cluster", "pcqat")
-        self.tflite_kwargs = self.get_tflite_kwargs("prune_cluster_pcqat")
+        self._tflite_inputs = self._get_tflite_inputs("prune_cluster_pcqat")
         return mnist.PCQATModel
 
     def run_modules(
@@ -170,7 +168,6 @@ class Benchmark(BenchmarkInterface):
 
         result = list()
 
-        # model = module()(logger=logger, **self.keras_kwargs)
         model = module()(self._keras_inputs, self.dataset, logger)
         if not only_infer:
             model.create_model()
@@ -179,16 +176,17 @@ class Benchmark(BenchmarkInterface):
 
         for method in self.tflite_methods:
             try:
-                converter = ImageClassificationConverter(method=method, logger=logger, **self.tflite_kwargs)
+                self._tflite_inputs.update_method(method)
+                converter = ImageClassificationConverter(self._tflite_inputs, self.dataset, logger)
                 converter.convert(model=model.model)
                 result.append(converter.evaluate())
                 del converter
             except RuntimeError as e:
                 _e = str(e).replace("\n", "")
-                logger.error(f"TFLite cannot convert '{self.tflite_kwargs.get('optimizer')}' '{method}'. {_e}")
+                logger.error(f"TFLite cannot convert '{self._tflite_inputs.optimizer}' '{method}'. {_e}")
 
         del model
-        self._keras_inputs = None
-        self.tflite_kwargs = None
+        self._keras_inputs: KerasModelInputs
+        self._tflite_inputs: TFLiteModelInputs
 
         return result

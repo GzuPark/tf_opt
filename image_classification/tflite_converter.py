@@ -7,26 +7,19 @@ from typing import Any, Dict
 import numpy as np
 import tensorflow as tf
 
-from utils.dataclass import Result
+from utils.dataclass import TFLiteModelInputs, Result
 
 
 class ImageClassificationConverter(object):
 
-    def __init__(
-            self,
-            root_dir: str,
-            dataset_name: str,
-            dataset: Dict[str, Any],
-            optimizer: str,
-            logger: logging.Logger,
-            method: str = "dynamic",
-    ) -> None:
+    def __init__(self, inputs: TFLiteModelInputs, dataset: Dict[str, Any], logger: logging.Logger) -> None:
         self.data = dataset
 
-        self._ckpt_dir = os.path.join(root_dir, "ckpt", dataset_name)
-        self._model_path = os.path.join(self._ckpt_dir, f"{dataset_name}_{optimizer}_{method}.tflite")
-        self._method = method if method in {"fp32", "fp16", "uint8", "dynamic", "int16x8"} else "dynamic"
-        self._optimizer = optimizer
+        self._ckpt_dir = os.path.join(inputs.root_dir, "ckpt", inputs.dataset_name)
+        _filename = f"{inputs.dataset_name}_{inputs.optimizer}_{inputs.method}.tflite"
+        self._model_path = os.path.join(self._ckpt_dir, _filename)
+        self._method = inputs.method if inputs.method in {"fp32", "fp16", "uint8", "dynamic", "int16x8"} else "dynamic"
+        self._optimizer = inputs.optimizer
         self._converter = None
         self._interpreter = None
 

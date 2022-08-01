@@ -20,7 +20,7 @@ class BenchmarkInterface(ABC):
         pass
 
     @abstractmethod
-    def get_tflite_kwargs(self, optimizer: str) -> Any:
+    def _get_tflite_inputs(self, optimizer: str) -> Any:
         pass
 
     @abstractmethod
