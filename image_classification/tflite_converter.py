@@ -2,7 +2,7 @@ import logging
 import os
 
 from time import perf_counter
-from typing import Any, Dict, Union
+from typing import Any, Dict
 
 import numpy as np
 import tensorflow as tf
