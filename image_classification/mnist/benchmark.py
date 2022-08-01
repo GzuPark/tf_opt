@@ -86,8 +86,8 @@ class Benchmark(BenchmarkInterface):
         return TFLiteModelInputs(
             root_dir=self.root_dir,
             dataset_name="mnist",
-            optimizer=optimizer,
             method=method,
+            optimizer=optimizer,
         )
 
     def get_optimize_module(self, optimize: TFOptimize) -> Any:
