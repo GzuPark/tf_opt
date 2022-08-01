@@ -34,9 +34,9 @@ class Benchmark(BenchmarkInterface):
         self.verbose = verbose
         self.dataset = self.load_dataset(path)
 
-        self.tflite_methods = tflite_methods
         self._keras_inputs: KerasModelInputs
         self._tflite_inputs: TFLiteModelInputs
+        self._tflite_methods = tflite_methods
 
     @staticmethod
     def load_dataset(root_dir: str) -> Dict[str, np.ndarray]:
@@ -162,11 +162,7 @@ class Benchmark(BenchmarkInterface):
         self._tflite_inputs = self._get_tflite_inputs(TFOptimize.PruningClusteringPCQAT)
         return mnist.PCQATModel
 
-    def run_modules(
-            self, module: Any,
-            logger: logging.Logger,
-            only_infer: bool = False,
-    ) -> List[Result]:
+    def run_modules(self, module: Any, logger: logging.Logger, only_infer: bool = False) -> List[Result]:
         tf.keras.backend.clear_session()
         gc.collect()
         sleep(3)
@@ -179,7 +175,7 @@ class Benchmark(BenchmarkInterface):
             model.train()
         result.append(model.evaluate())
 
-        for method in self.tflite_methods:
+        for method in self._tflite_methods:
             try:
                 self._tflite_inputs.update_method(method)
                 converter = ImageClassificationConverter(self._tflite_inputs, self.dataset, logger)

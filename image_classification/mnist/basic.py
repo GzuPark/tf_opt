@@ -15,8 +15,9 @@ class BasicModel(BaseModel):
     def __init__(self, inputs: KerasModelInputs, dataset: Dict[str, Any], logger: logging.Logger) -> None:
         super().__init__(inputs, dataset)
 
-        self.model = None
         self.model_path = os.path.join(self.ckpt_dir, inputs.model_filename)
+        self.model = None
+    
         self._method = inputs.method
         self._optimizer = inputs.optimizer
 
