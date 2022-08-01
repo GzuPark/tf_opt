@@ -12,6 +12,7 @@ import image_classification.mnist as mnist
 
 from image_classification.benchmark_interface import BenchmarkInterface
 from image_classification.tflite_converter import ImageClassificationConverter
+from utils.dataclass import Result
 
 
 class Benchmark(BenchmarkInterface):
@@ -167,7 +168,7 @@ class Benchmark(BenchmarkInterface):
             self, module: Any,
             logger: logging.Logger,
             only_infer: bool = False,
-    ) -> List[Dict[str, Any]]:
+    ) -> List[Result]:
         tf.keras.backend.clear_session()
         gc.collect()
         sleep(3)
