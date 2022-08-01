@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from typing import Union
 
+from utils.enums import TFOptimize
+
 
 @dataclass(frozen=True)
 class KerasModelInputs(object):
@@ -10,5 +12,5 @@ class KerasModelInputs(object):
     valid_split: float
     model_filename: str
     base_model_filename: Union[str, None]
-    method: Union[str, None]
+    method: Union[TFOptimize, None]
     verbose: bool

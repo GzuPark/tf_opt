@@ -9,6 +9,7 @@ import tensorflow_model_optimization as tfmot
 
 from image_classification.mnist import BaseModel
 from utils.dataclass import KerasModelInputs, Result
+from utils.enums import TFOptimize
 
 
 class CQATModel(BaseModel):
@@ -19,12 +20,13 @@ class CQATModel(BaseModel):
 
         self.model = None
         self.model_path = os.path.join(self.ckpt_dir, inputs.model_filename)
-        self._method = inputs.method.lower() if inputs.method.lower() in {"qat", "cqat"} else "cqat"
+        self._method = inputs.method
         self._base_model_path = os.path.join(self.ckpt_dir, inputs.base_model_filename)
         self._base_model = None
+        self._optimizer = inputs.method
 
         self._logger = logger
-        self._logger.info(f"Run clustering {inputs.method.upper()}")
+        self._logger.info(f"Run {self._optimizer}")
 
     def _get_qat_model(self) -> Any:
         return tfmot.quantization.keras.quantize_model(self._base_model)
@@ -45,8 +47,8 @@ class CQATModel(BaseModel):
         self._load_base_model()
 
         models = dict()
-        models["qat"] = self._get_qat_model
-        models["cqat"] = self._get_cqat_model
+        models[TFOptimize.ClusteringQAT] = self._get_qat_model
+        models[TFOptimize.ClusteringCQAT] = self._get_cqat_model
 
         target_model = models.get(self._method, self._get_cqat_model)
         self.model = target_model()
@@ -101,7 +103,7 @@ class CQATModel(BaseModel):
 
         result = Result(
             method="keras",
-            optimizer=f"cluster_{self._method}",
+            optimizer=str(self._optimizer),
             accuracy=accuracy,
             total_time=end_time - start_time,
             model_file_size=os.path.getsize(self.model_path),

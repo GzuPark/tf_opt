@@ -13,7 +13,7 @@ import image_classification.mnist as mnist
 from image_classification.benchmark_interface import BenchmarkInterface
 from image_classification.tflite_converter import ImageClassificationConverter
 from utils.dataclass import KerasModelInputs, TFLiteModelInputs, Result
-from utils.enums import TFLiteMethods
+from utils.enums import TFOptimize, TFLiteMethods
 
 
 class Benchmark(BenchmarkInterface):
@@ -63,22 +63,25 @@ class Benchmark(BenchmarkInterface):
 
     def _get_keras_inputs(
             self,
-            model_filename: str,
-            base_model_filename: Union[str, None] = None,
-            method: Union[str, None] = None,
+            method: TFOptimize,
+            base_model_filename: Union[TFOptimize, None] = None,
     ) -> KerasModelInputs:
         return KerasModelInputs(
             root_dir=self.root_dir,
             batch_size=self.batch_size,
             epochs=self.epochs,
             valid_split=self.valid_split,
-            model_filename=f"mnist_{model_filename}_keras.h5",
-            base_model_filename=None if base_model_filename is None else f"mnist_{base_model_filename}_keras.h5",
+            model_filename=f"mnist_{str(method)}_keras.h5",
+            base_model_filename=None if base_model_filename is None else f"mnist_{str(base_model_filename)}_keras.h5",
             method=method,
             verbose=self.verbose,
         )
 
-    def _get_tflite_inputs(self, optimizer: str, method: TFLiteMethods = TFLiteMethods.Dynamic) -> TFLiteModelInputs:
+    def _get_tflite_inputs(
+            self,
+            optimizer: TFOptimize,
+            method: TFLiteMethods = TFLiteMethods.Dynamic,
+    ) -> TFLiteModelInputs:
         return TFLiteModelInputs(
             root_dir=self.root_dir,
             dataset_name="mnist",
@@ -86,76 +89,76 @@ class Benchmark(BenchmarkInterface):
             method=method,
         )
 
-    def get_optimize_module(self, optimize: str) -> Any:
+    def get_optimize_module(self, optimize: TFOptimize) -> Any:
         result = dict()
 
-        result["none"] = self._get_optimize_none
-        result["prune"] = self._get_optimize_prune
-        result["quant"] = self._get_optimize_quant
-        result["cluster"] = self._get_optimize_cluster
-        result["cluster_qat"] = self._get_optimize_cluster_qat
-        result["cluster_cqat"] = self._get_optimize_cluster_cqat
-        result["prune_qat"] = self._get_optimize_prune_qat
-        result["prune_pqat"] = self._get_optimize_prune_pqat
-        result["prune_cluster"] = self._get_optimize_prune_cluster
-        result["prune_cluster_qat"] = self._get_optimize_prune_cluster_qat
-        result["prune_cluster_pcqat"] = self._get_optimize_prune_cluster_pcqat
+        result[TFOptimize.NONE] = self._get_optimize_none
+        result[TFOptimize.Pruning] = self._get_optimize_prune
+        result[TFOptimize.Quantization] = self._get_optimize_quant
+        result[TFOptimize.Clustering] = self._get_optimize_cluster
+        result[TFOptimize.ClusteringQAT] = self._get_optimize_cluster_qat
+        result[TFOptimize.ClusteringCQAT] = self._get_optimize_cluster_cqat
+        result[TFOptimize.PruningQAT] = self._get_optimize_prune_qat
+        result[TFOptimize.PruningPQAT] = self._get_optimize_prune_pqat
+        result[TFOptimize.PruningClustering] = self._get_optimize_prune_cluster
+        result[TFOptimize.PruningClusteringQAT] = self._get_optimize_prune_cluster_qat
+        result[TFOptimize.PruningClusteringPCQAT] = self._get_optimize_prune_cluster_pcqat
 
         return result.get(optimize, self._get_optimize_none)
 
     def _get_optimize_none(self) -> Any:
-        self._keras_inputs = self._get_keras_inputs("none")
-        self._tflite_inputs = self._get_tflite_inputs("none")
+        self._keras_inputs = self._get_keras_inputs(TFOptimize.NONE)
+        self._tflite_inputs = self._get_tflite_inputs(TFOptimize.NONE)
         return mnist.BasicModel
 
     def _get_optimize_prune(self) -> Any:
-        self._keras_inputs = self._get_keras_inputs("prune", "none")
-        self._tflite_inputs = self._get_tflite_inputs("prune")
+        self._keras_inputs = self._get_keras_inputs(TFOptimize.Pruning, TFOptimize.NONE)
+        self._tflite_inputs = self._get_tflite_inputs(TFOptimize.Pruning)
         return mnist.PruningModel
 
     def _get_optimize_quant(self) -> Any:
-        self._keras_inputs = self._get_keras_inputs("quant", "none")
-        self._tflite_inputs = self._get_tflite_inputs("quant")
+        self._keras_inputs = self._get_keras_inputs(TFOptimize.Quantization, TFOptimize.NONE)
+        self._tflite_inputs = self._get_tflite_inputs(TFOptimize.Quantization)
         return mnist.QuantizationModel
 
     def _get_optimize_cluster(self) -> Any:
-        self._keras_inputs = self._get_keras_inputs("cluster", "none")
-        self._tflite_inputs = self._get_tflite_inputs("cluster")
+        self._keras_inputs = self._get_keras_inputs(TFOptimize.Clustering, TFOptimize.Clustering)
+        self._tflite_inputs = self._get_tflite_inputs(TFOptimize.Clustering)
         return mnist.ClusteringModel
 
     def _get_optimize_cluster_qat(self) -> Any:
-        self._keras_inputs = self._get_keras_inputs("cluster_qat", "cluster", "qat")
-        self._tflite_inputs = self._get_tflite_inputs("cluster_qat")
+        self._keras_inputs = self._get_keras_inputs(TFOptimize.ClusteringQAT, TFOptimize.Clustering)
+        self._tflite_inputs = self._get_tflite_inputs(TFOptimize.ClusteringQAT)
         return mnist.CQATModel
 
     def _get_optimize_cluster_cqat(self) -> Any:
-        self._keras_inputs = self._get_keras_inputs("cluster_cqat", "cluster", "cqat")
-        self._tflite_inputs = self._get_tflite_inputs("cluster_cqat")
+        self._keras_inputs = self._get_keras_inputs(TFOptimize.ClusteringCQAT, TFOptimize.Clustering)
+        self._tflite_inputs = self._get_tflite_inputs(TFOptimize.ClusteringCQAT)
         return mnist.CQATModel
 
     def _get_optimize_prune_qat(self) -> Any:
-        self._keras_inputs = self._get_keras_inputs("prune_qat", "prune", "qat")
-        self._tflite_inputs = self._get_tflite_inputs("prune_qat")
+        self._keras_inputs = self._get_keras_inputs(TFOptimize.PruningQAT, TFOptimize.Pruning)
+        self._tflite_inputs = self._get_tflite_inputs(TFOptimize.PruningQAT)
         return mnist.PQATModel
 
     def _get_optimize_prune_pqat(self) -> Any:
-        self._keras_inputs = self._get_keras_inputs("prune_pqat", "prune", "pqat")
-        self._tflite_inputs = self._get_tflite_inputs("prune_pqat")
+        self._keras_inputs = self._get_keras_inputs(TFOptimize.PruningPQAT, TFOptimize.Pruning)
+        self._tflite_inputs = self._get_tflite_inputs(TFOptimize.PruningPQAT)
         return mnist.PQATModel
 
     def _get_optimize_prune_cluster(self) -> Any:
-        self._keras_inputs = self._get_keras_inputs("prune_cluster", "prune")
-        self._tflite_inputs = self._get_tflite_inputs("prune_cluster")
+        self._keras_inputs = self._get_keras_inputs(TFOptimize.PruningClustering, TFOptimize.Pruning)
+        self._tflite_inputs = self._get_tflite_inputs(TFOptimize.PruningClustering)
         return mnist.PruneClusterModel
 
     def _get_optimize_prune_cluster_qat(self) -> Any:
-        self._keras_inputs = self._get_keras_inputs("prune_cluster_qat", "prune_cluster", "qat")
-        self._tflite_inputs = self._get_tflite_inputs("prune_cluster_qat")
+        self._keras_inputs = self._get_keras_inputs(TFOptimize.PruningClusteringQAT, TFOptimize.PruningClustering)
+        self._tflite_inputs = self._get_tflite_inputs(TFOptimize.PruningClusteringQAT)
         return mnist.PCQATModel
 
     def _get_optimize_prune_cluster_pcqat(self) -> Any:
-        self._keras_inputs = self._get_keras_inputs("prune_cluster_pcqat", "prune_cluster", "pcqat")
-        self._tflite_inputs = self._get_tflite_inputs("prune_cluster_pcqat")
+        self._keras_inputs = self._get_keras_inputs(TFOptimize.PruningClusteringPCQAT, TFOptimize.PruningClustering)
+        self._tflite_inputs = self._get_tflite_inputs(TFOptimize.PruningClusteringPCQAT)
         return mnist.PCQATModel
 
     def run_modules(

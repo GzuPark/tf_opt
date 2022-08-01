@@ -17,9 +17,10 @@ class BasicModel(BaseModel):
 
         self.model = None
         self.model_path = os.path.join(self.ckpt_dir, inputs.model_filename)
+        self._optimizer = inputs.method
 
         self._logger = logger
-        self._logger.info("Run without optimizing")
+        self._logger.info(f"Run {self._optimizer}")
 
     def create_model(self) -> None:
         input_layer = tf.keras.Input(shape=(28, 28))
@@ -76,7 +77,7 @@ class BasicModel(BaseModel):
 
         result = Result(
             method="keras",
-            optimizer="none",
+            optimizer=str(self._optimizer),
             accuracy=accuracy,
             total_time=end_time - start_time,
             model_file_size=os.path.getsize(self.model_path),

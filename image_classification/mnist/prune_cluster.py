@@ -22,9 +22,10 @@ class PruneClusterModel(BaseModel):
         self.model_path = os.path.join(self.ckpt_dir, inputs.model_filename)
         self._base_model_path = os.path.join(self.ckpt_dir, inputs.base_model_filename)
         self._base_model = None
+        self._optimizer = inputs.method
 
         self._logger = logger
-        self._logger.info("Run pruning-clustering")
+        self._logger.info(f"Run {self._optimizer}")
 
     def _load_base_model(self) -> None:
         if os.path.exists(self._base_model_path):
@@ -89,7 +90,7 @@ class PruneClusterModel(BaseModel):
 
         result = Result(
             method="keras",
-            optimizer="prune_cluster",
+            optimizer=str(self._optimizer),
             accuracy=accuracy,
             total_time=end_time - start_time,
             model_file_size=os.path.getsize(self.model_path),

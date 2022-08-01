@@ -16,15 +16,15 @@ class BenchmarkInterface(ABC):
         pass
 
     @abstractmethod
-    def _get_keras_inputs(self, model_filename: str, base_model_filename: str, method: str) -> Any:
+    def _get_keras_inputs(self, method: str, base_model_filename: Any) -> Any:
         pass
 
     @abstractmethod
-    def _get_tflite_inputs(self, optimizer: str) -> Any:
+    def _get_tflite_inputs(self, optimizer: Any, method: Any) -> Any:
         pass
 
     @abstractmethod
-    def get_optimize_module(self, optimize: str) -> Any:
+    def get_optimize_module(self, optimize: Any) -> Any:
         pass
 
     @abstractmethod

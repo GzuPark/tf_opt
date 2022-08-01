@@ -110,7 +110,7 @@ class ImageClassificationConverter(object):
 
         result = Result(
             method=str(self._method),
-            optimizer=self._optimizer,
+            optimizer=str(self._optimizer),
             accuracy=(np.sum(self.data["y_test"] == predictions) / len(self.data["y_test"])).astype(float),
             total_time=end_time - start_time,
             model_file_size=os.path.getsize(self._model_path),

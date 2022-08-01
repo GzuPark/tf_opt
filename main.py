@@ -3,22 +3,22 @@ import os.path
 import utils
 
 from image_classification import mnist
-from utils.enums import TFLiteMethods
+from utils.enums import TFOptimize, TFLiteMethods
 
 
 def run_mnist(path: str) -> None:
     tf_model_optimize_methods = [
-        "none",
-        "prune",
-        "quant",
-        "cluster",
-        "cluster_qat",
-        "cluster_cqat",
-        "prune_qat",
-        "prune_pqat",
-        "prune_cluster",
-        "prune_cluster_qat",
-        "prune_cluster_pcqat",
+        TFOptimize.NONE,
+        TFOptimize.Pruning,
+        TFOptimize.Quantization,
+        TFOptimize.Clustering,
+        TFOptimize.ClusteringQAT,
+        TFOptimize.ClusteringCQAT,
+        TFOptimize.PruningQAT,
+        TFOptimize.PruningPQAT,
+        TFOptimize.PruningClustering,
+        TFOptimize.PruningClusteringQAT,
+        TFOptimize.PruningClusteringPCQAT,
     ]
 
     tflite_quantize_methods = [
