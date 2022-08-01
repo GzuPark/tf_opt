@@ -3,7 +3,7 @@ import os.path
 import utils
 
 from image_classification import mnist
-from utils.enums import TFOptimize, TFLiteMethods
+from utils.enums import TFOptimize, TFLiteQuant
 
 
 def run_mnist(path: str) -> None:
@@ -22,11 +22,11 @@ def run_mnist(path: str) -> None:
     ]
 
     tflite_quantize_methods = [
-        TFLiteMethods.FP32,
-        TFLiteMethods.FP16,
-        TFLiteMethods.Dynamic,
-        TFLiteMethods.UINT8,
-        TFLiteMethods.INT16x8,
+        TFLiteQuant.FP32,
+        TFLiteQuant.FP16,
+        TFLiteQuant.Dynamic,
+        TFLiteQuant.UINT8,
+        TFLiteQuant.INT16x8,
     ]
 
     logger = utils.get_logger(path, "mnist")

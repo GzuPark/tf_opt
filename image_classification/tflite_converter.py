@@ -8,7 +8,7 @@ import numpy as np
 import tensorflow as tf
 
 from utils.dataclass import TFLiteModelInputs, Result
-from utils.enums import TFLiteMethods
+from utils.enums import TFLiteQuant
 
 
 class ImageClassificationConverter(object):
@@ -29,11 +29,11 @@ class ImageClassificationConverter(object):
     def _initialize(self) -> None:
         quant_methods = dict()
 
-        quant_methods[TFLiteMethods.FP32] = self._get_fp32
-        quant_methods[TFLiteMethods.FP16] = self._get_fp16
-        quant_methods[TFLiteMethods.Dynamic] = self._get_dynamic
-        quant_methods[TFLiteMethods.UINT8] = self._get_uint8
-        quant_methods[TFLiteMethods.INT16x8] = self._get_int16x8
+        quant_methods[TFLiteQuant.FP32] = self._get_fp32
+        quant_methods[TFLiteQuant.FP16] = self._get_fp16
+        quant_methods[TFLiteQuant.Dynamic] = self._get_dynamic
+        quant_methods[TFLiteQuant.UINT8] = self._get_uint8
+        quant_methods[TFLiteQuant.INT16x8] = self._get_int16x8
 
         target_optimizer = quant_methods.get(self._method, self._get_dynamic)
         target_optimizer()

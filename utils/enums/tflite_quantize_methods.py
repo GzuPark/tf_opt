@@ -1,7 +1,7 @@
 from enum import Enum
 
 
-class TFLiteMethods(Enum):
+class TFLiteQuant(Enum):
     FP32 = "fp32"
     FP16 = "fp16"
     Dynamic = "dynamic"

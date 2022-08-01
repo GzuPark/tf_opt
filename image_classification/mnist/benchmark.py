@@ -13,7 +13,7 @@ import image_classification.mnist as mnist
 from image_classification.benchmark_interface import BenchmarkInterface
 from image_classification.tflite_converter import ImageClassificationConverter
 from utils.dataclass import KerasModelInputs, TFLiteModelInputs, Result
-from utils.enums import TFOptimize, TFLiteMethods
+from utils.enums import TFOptimize, TFLiteQuant
 
 
 class Benchmark(BenchmarkInterface):
@@ -21,7 +21,7 @@ class Benchmark(BenchmarkInterface):
     def __init__(
             self,
             path: str,
-            tflite_methods: List[TFLiteMethods],
+            tflite_methods: List[TFLiteQuant],
             batch_size: int = 128,
             epochs: int = 5,
             valid_split: float = 0.1,
@@ -80,7 +80,7 @@ class Benchmark(BenchmarkInterface):
     def _get_tflite_inputs(
             self,
             optimizer: TFOptimize,
-            method: TFLiteMethods = TFLiteMethods.Dynamic,
+            method: TFLiteQuant = TFLiteQuant.Dynamic,
     ) -> TFLiteModelInputs:
         return TFLiteModelInputs(
             root_dir=self.root_dir,
