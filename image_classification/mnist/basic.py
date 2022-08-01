@@ -64,12 +64,6 @@ class BasicModel(BaseModel):
         if self._load_model():
             return
 
-        train_kwargs = dict()
-        train_kwargs["batch_size"] = self.batch_size
-        train_kwargs["epochs"] = self.epochs
-        train_kwargs["validation_split"] = self.valid_split
-        train_kwargs["verbose"] = self.verbose
-
         train_params = TrainParams(
             batch_size=self.batch_size,
             epochs=self.epochs,
