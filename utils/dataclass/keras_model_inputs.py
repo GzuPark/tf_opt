@@ -1,5 +1,5 @@
-from dataclasses import dataclass, asdict
-from typing import Any, Dict, Union
+from dataclasses import dataclass
+from typing import Union
 
 
 @dataclass(frozen=True)
@@ -12,6 +12,3 @@ class KerasModelInputs(object):
     base_model_filename: Union[str, None]
     method: Union[str, None]
     verbose: bool
-
-    def to_dict(self) -> Dict[str, Any]:
-        return asdict(self)
