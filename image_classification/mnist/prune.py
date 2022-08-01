@@ -81,15 +81,15 @@ class PruningModel(BaseModel):
         if self._load_model():
             return
 
-        train_kwargs = dict()
-        train_kwargs["batch_size"] = self.batch_size
-        train_kwargs["epochs"] = self.epochs
-        train_kwargs["callbacks"] = [tfmot.sparsity.keras.UpdatePruningStep()]
-        train_kwargs["validation_split"] = self.valid_split
-        train_kwargs["verbose"] = self.verbose
-
         self._compile()
-        self.model.fit(self.x_train, self.y_train, **train_kwargs)
+        self.model.fit(
+            self.x_train, self.y_train,
+            batch_size=self.batch_size,
+            epochs=self.epochs,
+            validation_split=self.valid_split,
+            callbacks=[tfmot.sparsity.keras.UpdatePruningStep()],
+            verbose=self.verbose,
+        )
 
         model_for_export = tfmot.sparsity.keras.strip_pruning(self.model)
         tf.keras.models.save_model(model_for_export, self.model_path, include_optimizer=True)
