@@ -7,7 +7,7 @@ from typing import Any, Dict
 import tensorflow as tf
 
 from image_classification.mnist import BaseModel
-from utils.dataclass import Result
+from utils.dataclass import Result, TrainParams
 
 
 class BasicModel(BaseModel):
@@ -70,8 +70,15 @@ class BasicModel(BaseModel):
         train_kwargs["validation_split"] = self.valid_split
         train_kwargs["verbose"] = self.verbose
 
+        train_params = TrainParams(
+            batch_size=self.batch_size,
+            epochs=self.epochs,
+            validation_split=self.valid_split,
+            verbose=self.verbose,
+        )
+
         self._compile()
-        self.model.fit(self.x_train, self.y_train, **train_kwargs)
+        self.model.fit(self.x_train, self.y_train, **train_params.to_dict())
 
         tf.keras.models.save_model(self.model, self.model_path, include_optimizer=True)
 
