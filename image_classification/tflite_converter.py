@@ -7,6 +7,8 @@ from typing import Any, Dict, Union
 import numpy as np
 import tensorflow as tf
 
+from utils.dataclass import Result
+
 
 class ImageClassificationConverter(object):
 
@@ -86,7 +88,7 @@ class ImageClassificationConverter(object):
         self._interpreter = tf.lite.Interpreter(self._model_path)
         self._interpreter.allocate_tensors()
 
-    def evaluate(self) -> Dict[str, Union[np.ndarray, float]]:
+    def evaluate(self) -> Result:
         self._get_interpreter()
 
         input_details = self._interpreter.get_input_details()[0]
@@ -112,13 +114,14 @@ class ImageClassificationConverter(object):
 
         end_time = perf_counter()
 
-        result = dict()
-        result["method"] = self._method
-        result["opt"] = self._optimizer
-        result["total_time"] = end_time - start_time
-        result["model_file_size"] = os.path.getsize(self._model_path)
-        result["accuracy"] = (np.sum(self.data["y_test"] == predictions) / len(self.data["y_test"])).astype(float)
+        result = Result(
+            method=self._method,
+            optimizer=self._optimizer,
+            accuracy=(np.sum(self.data["y_test"] == predictions) / len(self.data["y_test"])).astype(float),
+            total_time=end_time - start_time,
+            model_file_size=os.path.getsize(self._model_path),
+        )
 
-        self._logger.info(result)
+        self._logger.info(result.to_dict())
 
         return result

@@ -2,6 +2,8 @@ import os
 
 from typing import Any, Dict
 
+from utils.dataclass import Result
+
 
 class BaseModel(object):
 
@@ -37,5 +39,5 @@ class BaseModel(object):
     def train(self) -> None:
         raise NotImplementedError
 
-    def evaluate(self) -> Dict[str, Any]:
+    def evaluate(self) -> Result:
         raise NotImplementedError

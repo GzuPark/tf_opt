@@ -1,9 +1,12 @@
+from math import pow
 from time import sleep
-from typing import Any, Dict, List
+from typing import List
+
+from utils.dataclass import Result
 
 
 def print_table(
-        outputs: List[Dict[str, Any]],
+        results: List[Result],
         time_unit: str = "ms",
         file_unit: str = "KB",
 ) -> None:
@@ -33,17 +36,11 @@ def print_table(
     print(title)
     print(bar)
 
-    for out in outputs:
-        method = out['method']
-        optimize = out['opt']
-        accuracy = out['accuracy'] * 100
-        total_time = out['total_time'] * (1000 ** time_units.get(time_unit.lower(), "ms"))
-        file_size = out['model_file_size'] / (1024 ** file_units.get(file_unit.lower(), "KB"))
-
-        row = f"| {method:>10} |"
-        row += f" {optimize:>20} |"
-        row += f" {accuracy:>10.2f} % |"
-        row += f" {total_time:>12.1f} {time_unit} |"
-        row += f" {file_size:>12.2f} {file_unit} |"
+    for result in results:
+        row = f"| {result.method:>10} |"
+        row += f" {result.optimizer:>20} |"
+        row += f" {result.accuracy:>10.2f} % |"
+        row += f" {result.total_time * pow(1000, time_units.get(time_unit.lower(), 'ms')):>12.1f} {time_unit} |"
+        row += f" {result.model_file_size / pow(1024, file_units.get(file_unit.lower(), 'KB')):>12.2f} {file_unit} |"
 
         print(row)

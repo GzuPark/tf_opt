@@ -9,6 +9,7 @@ import tensorflow as tf
 import tensorflow_model_optimization as tfmot
 
 from image_classification.mnist import BaseModel
+from utils.dataclass import Result
 
 
 class PruningModel(BaseModel):
@@ -93,7 +94,7 @@ class PruningModel(BaseModel):
         model_for_export = tfmot.sparsity.keras.strip_pruning(self.model)
         tf.keras.models.save_model(model_for_export, self.model_path, include_optimizer=True)
 
-    def evaluate(self) -> Dict[str, Any]:
+    def evaluate(self) -> Result:
         if (self.model is None) and (not self._load_model()):
             self._logger.error(f"Cannot load {self.model_path}.")
             raise ValueError(f"Cannot load {self.model_path}.")
@@ -102,13 +103,14 @@ class PruningModel(BaseModel):
         _, accuracy = self.model.evaluate(self.x_test, self.y_test, verbose=self.verbose)
         end_time = perf_counter()
 
-        result = dict()
-        result["method"] = "keras"
-        result["opt"] = "prune"
-        result["accuracy"] = accuracy
-        result["total_time"] = end_time - start_time
-        result["model_file_size"] = os.path.getsize(self.model_path)
+        result = Result(
+            method="keras",
+            optimizer="prune",
+            accuracy=accuracy,
+            total_time=end_time - start_time,
+            model_file_size=os.path.getsize(self.model_path),
+        )
 
-        self._logger.info(result)
+        self._logger.info(result.to_dict())
 
         return result
