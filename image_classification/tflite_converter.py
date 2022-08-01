@@ -8,6 +8,7 @@ import numpy as np
 import tensorflow as tf
 
 from utils.dataclass import TFLiteModelInputs, Result
+from utils.enums import TFLiteMethods
 
 
 class ImageClassificationConverter(object):
@@ -18,7 +19,7 @@ class ImageClassificationConverter(object):
         self._ckpt_dir = os.path.join(inputs.root_dir, "ckpt", inputs.dataset_name)
         _filename = f"{inputs.dataset_name}_{inputs.optimizer}_{inputs.method}.tflite"
         self._model_path = os.path.join(self._ckpt_dir, _filename)
-        self._method = inputs.method if inputs.method in {"fp32", "fp16", "uint8", "dynamic", "int16x8"} else "dynamic"
+        self._method = inputs.method
         self._optimizer = inputs.optimizer
         self._converter = None
         self._interpreter = None
@@ -28,11 +29,11 @@ class ImageClassificationConverter(object):
     def _initialize(self) -> None:
         quant_methods = dict()
 
-        quant_methods["fp32"] = self._get_fp32
-        quant_methods["fp16"] = self._get_fp16
-        quant_methods["dynamic"] = self._get_dynamic
-        quant_methods["uin8"] = self._get_uint8
-        quant_methods["int16x8"] = self._get_int16x8
+        quant_methods[TFLiteMethods.FP32] = self._get_fp32
+        quant_methods[TFLiteMethods.FP16] = self._get_fp16
+        quant_methods[TFLiteMethods.Dynamic] = self._get_dynamic
+        quant_methods[TFLiteMethods.UINT8] = self._get_uint8
+        quant_methods[TFLiteMethods.INT16x8] = self._get_int16x8
 
         target_optimizer = quant_methods.get(self._method, self._get_dynamic)
         target_optimizer()
@@ -108,7 +109,7 @@ class ImageClassificationConverter(object):
         end_time = perf_counter()
 
         result = Result(
-            method=self._method,
+            method=str(self._method),
             optimizer=self._optimizer,
             accuracy=(np.sum(self.data["y_test"] == predictions) / len(self.data["y_test"])).astype(float),
             total_time=end_time - start_time,
