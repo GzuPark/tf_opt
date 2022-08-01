@@ -16,7 +16,7 @@ class BenchmarkInterface(ABC):
         pass
 
     @abstractmethod
-    def get_keras_kwargs(self, model_filename: str, base_model_filename: str, method: str) -> Any:
+    def _get_keras_inputs(self, model_filename: str, base_model_filename: str, method: str) -> Any:
         pass
 
     @abstractmethod

@@ -12,7 +12,7 @@ import image_classification.mnist as mnist
 
 from image_classification.benchmark_interface import BenchmarkInterface
 from image_classification.tflite_converter import ImageClassificationConverter
-from utils.dataclass import Result
+from utils.dataclass import KerasModelInputs, Result
 
 
 class Benchmark(BenchmarkInterface):
@@ -34,7 +34,7 @@ class Benchmark(BenchmarkInterface):
         self.dataset = self.load_dataset(path)
 
         self.tflite_methods = tflite_methods
-        self.keras_kwargs = None
+        self._keras_inputs = None
         self.tflite_kwargs = None
 
     @staticmethod
@@ -60,25 +60,22 @@ class Benchmark(BenchmarkInterface):
 
         return result
 
-    def get_keras_kwargs(
+    def _get_keras_inputs(
             self,
             model_filename: str,
             base_model_filename: Union[str, None] = None,
             method: Union[str, None] = None,
-    ) -> Dict[str, Any]:
-        result = dict()
-
-        result["root_dir"] = self.root_dir
-        result["batch_size"] = self.batch_size
-        result["epochs"] = self.epochs
-        result["valid_split"] = self.valid_split
-        result["verbose"] = self.verbose
-        result["dataset"] = self.dataset
-        result["model_filename"] = f"mnist_{model_filename}_keras.h5"
-        result["base_model_filename"] = None if base_model_filename is None else f"mnist_{base_model_filename}_keras.h5"
-        result["method"] = method
-
-        return result
+    ) -> KerasModelInputs:
+        return KerasModelInputs(
+            root_dir=self.root_dir,
+            batch_size=self.batch_size,
+            epochs=self.epochs,
+            valid_split=self.valid_split,
+            model_filename=f"mnist_{model_filename}_keras.h5",
+            base_model_filename=None if base_model_filename is None else f"mnist_{base_model_filename}_keras.h5",
+            method=method,
+            verbose=self.verbose,
+        )
 
     def get_tflite_kwargs(self, optimizer: str) -> Dict[str, Any]:
         result = dict()
@@ -108,57 +105,57 @@ class Benchmark(BenchmarkInterface):
         return result.get(optimize, self._get_optimize_none)
 
     def _get_optimize_none(self) -> Any:
-        self.keras_kwargs = self.get_keras_kwargs("none")
+        self._keras_inputs = self._get_keras_inputs("none")
         self.tflite_kwargs = self.get_tflite_kwargs("none")
         return mnist.BasicModel
 
     def _get_optimize_prune(self) -> Any:
-        self.keras_kwargs = self.get_keras_kwargs("prune", "none")
+        self._keras_inputs = self._get_keras_inputs("prune", "none")
         self.tflite_kwargs = self.get_tflite_kwargs("prune")
         return mnist.PruningModel
 
     def _get_optimize_quant(self) -> Any:
-        self.keras_kwargs = self.get_keras_kwargs("quant", "none")
+        self._keras_inputs = self._get_keras_inputs("quant", "none")
         self.tflite_kwargs = self.get_tflite_kwargs("quant")
         return mnist.QuantizationModel
 
     def _get_optimize_cluster(self) -> Any:
-        self.keras_kwargs = self.get_keras_kwargs("cluster", "none")
+        self._keras_inputs = self._get_keras_inputs("cluster", "none")
         self.tflite_kwargs = self.get_tflite_kwargs("cluster")
         return mnist.ClusteringModel
 
     def _get_optimize_cluster_qat(self) -> Any:
-        self.keras_kwargs = self.get_keras_kwargs("cluster_qat", "cluster", "qat")
+        self._keras_inputs = self._get_keras_inputs("cluster_qat", "cluster", "qat")
         self.tflite_kwargs = self.get_tflite_kwargs("cluster_qat")
         return mnist.CQATModel
 
     def _get_optimize_cluster_cqat(self) -> Any:
-        self.keras_kwargs = self.get_keras_kwargs("cluster_cqat", "cluster", "cqat")
+        self._keras_inputs = self._get_keras_inputs("cluster_cqat", "cluster", "cqat")
         self.tflite_kwargs = self.get_tflite_kwargs("cluster_cqat")
         return mnist.CQATModel
 
     def _get_optimize_prune_qat(self) -> Any:
-        self.keras_kwargs = self.get_keras_kwargs("prune_qat", "prune", "qat")
+        self._keras_inputs = self._get_keras_inputs("prune_qat", "prune", "qat")
         self.tflite_kwargs = self.get_tflite_kwargs("prune_qat")
         return mnist.PQATModel
 
     def _get_optimize_prune_pqat(self) -> Any:
-        self.keras_kwargs = self.get_keras_kwargs("prune_pqat", "prune", "pqat")
+        self._keras_inputs = self._get_keras_inputs("prune_pqat", "prune", "pqat")
         self.tflite_kwargs = self.get_tflite_kwargs("prune_pqat")
         return mnist.PQATModel
 
     def _get_optimize_prune_cluster(self) -> Any:
-        self.keras_kwargs = self.get_keras_kwargs("prune_cluster", "prune")
+        self._keras_inputs = self._get_keras_inputs("prune_cluster", "prune")
         self.tflite_kwargs = self.get_tflite_kwargs("prune_cluster")
         return mnist.PruneClusterModel
 
     def _get_optimize_prune_cluster_qat(self) -> Any:
-        self.keras_kwargs = self.get_keras_kwargs("prune_cluster_qat", "prune_cluster", "qat")
+        self._keras_inputs = self._get_keras_inputs("prune_cluster_qat", "prune_cluster", "qat")
         self.tflite_kwargs = self.get_tflite_kwargs("prune_cluster_qat")
         return mnist.PCQATModel
 
     def _get_optimize_prune_cluster_pcqat(self) -> Any:
-        self.keras_kwargs = self.get_keras_kwargs("prune_cluster_pcqat", "prune_cluster", "pcqat")
+        self._keras_inputs = self._get_keras_inputs("prune_cluster_pcqat", "prune_cluster", "pcqat")
         self.tflite_kwargs = self.get_tflite_kwargs("prune_cluster_pcqat")
         return mnist.PCQATModel
 
@@ -173,7 +170,8 @@ class Benchmark(BenchmarkInterface):
 
         result = list()
 
-        model = module()(logger=logger, **self.keras_kwargs)
+        # model = module()(logger=logger, **self.keras_kwargs)
+        model = module()(self._keras_inputs, self.dataset, logger)
         if not only_infer:
             model.create_model()
             model.train()
@@ -190,7 +188,7 @@ class Benchmark(BenchmarkInterface):
                 logger.error(f"TFLite cannot convert '{self.tflite_kwargs.get('optimizer')}' '{method}'. {_e}")
 
         del model
-        self.keras_kwargs = None
+        self._keras_inputs = None
         self.tflite_kwargs = None
 
         return result

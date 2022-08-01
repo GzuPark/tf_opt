@@ -9,32 +9,19 @@ import tensorflow_model_optimization as tfmot
 import tensorflow_model_optimization.python.core.clustering.keras.experimental.cluster as pc_cluster
 
 from image_classification.mnist import BaseModel
-from utils.dataclass import Result
+from utils.dataclass import KerasModelInputs, Result
 
 
 class PruneClusterModel(BaseModel):
     """Sparsity preserving clustering"""
 
-    def __init__(
-            self,
-            root_dir: str,
-            model_filename: str,
-            base_model_filename: str,
-            dataset: Dict[str, Any],
-            valid_split: float,
-            batch_size: int,
-            epochs: int,
-            logger: logging.Logger,
-            verbose: bool = False,
-            **kwargs,
-    ) -> None:
-        super().__init__(root_dir, dataset, valid_split, batch_size, epochs, verbose)
+    def __init__(self, inputs: KerasModelInputs, dataset: Dict[str, Any], logger: logging.Logger) -> None:
+        super().__init__(inputs, dataset)
 
         self.model = None
-        self.model_path = os.path.join(self.ckpt_dir, model_filename)
-        self._base_model_path = os.path.join(self.ckpt_dir, base_model_filename)
+        self.model_path = os.path.join(self.ckpt_dir, inputs.model_filename)
+        self._base_model_path = os.path.join(self.ckpt_dir, inputs.base_model_filename)
         self._base_model = None
-        _ = kwargs
 
         self._logger = logger
         self._logger.info("Run pruning-clustering")
